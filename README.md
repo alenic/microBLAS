@@ -1,4 +1,3 @@
 # microBLAS
 
-A simple, tiny and efficient BLAS library, designed for Microcontrollers
-
+A simple, tiny and efficient BLAS (Basic Linear Algebra Subroutines) library, designed for PC and Microcontrollers.
