@@ -1,4 +1,4 @@
-# microBLAS's folders structure
+# microBLAS's directory structure
 
 In the root folder:
   * **include**: Inlcude files
@@ -11,7 +11,7 @@ In the root folder:
 The microBLAS library can have different implementations, for example:
   * **PC**: a general version for Personal Computer, with loop unrolled code
   * **Arduino**: a version for Arduino
-  * **Other**: other implementations that preserve the folder structures of the project.
+  * **Other**: other implementations that preserve the directory structure of the project.
   
 
  
