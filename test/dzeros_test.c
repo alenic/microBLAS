@@ -1,4 +1,6 @@
-#include "double_test.h"
+#include "gtest/gtest.h"
+#include "microBLAS.h"
+
 
 TEST(dzeros, test_base) {
 	double *dact1, dexp1[]={0.0},

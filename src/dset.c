@@ -13,19 +13,13 @@
 
 */
 
-#include "dmicroBLAS.h"
+#include "microBLAS.h"
 
-double dasum(unsigned int n, double *dx)
+// Set a vector to a constant value
+void dset(unsigned int n, double *dx, const double *da)
 {
-	unsigned int i;
-	register double sum = 0.0;
-	
-	for(i=0; i<n; i++)
-	{
-		if(dx[i] < 0)
-			sum += -dx[i];
-		else
-			sum += dx[i];
+	int i;
+	for(i=0; i<n; i++) {
+		dx[i] = *da;
 	}
-	return sum;
 }

@@ -13,7 +13,7 @@
 
 */
 
-#include "dmicroBLAS.h"
+#include "microBLAS.h"
 
 // y=da*A*x+beta*y
 void dgemv(unsigned int m, unsigned int n, double da, double *A, unsigned int lda, double *dx, double db, double *dy)

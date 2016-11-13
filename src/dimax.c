@@ -13,22 +13,22 @@
 
 */
 
-#include "dmicroBLAS.h"
+#include "microBLAS.h"
 
-unsigned int dimin(unsigned int n, double *dx)
+unsigned int dimax(unsigned int n, double *dx)
 {
-	unsigned int i,i_min;
-	register double min=dx[0],dxx;
+	unsigned int i,i_max;
+	register double max=dx[0],dxx;
 	
 	for(i=1;i<n;i++)
 	{
 		dxx=dx[i];
-		if(dxx<min)
+		if(dxx>max)
 		{
-			min=dxx;
-			i_min=i;
+			max=dxx;
+			i_max=i;
 		}
 	}
 
-	return i_min;
+	return i_max;
 }

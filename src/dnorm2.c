@@ -13,7 +13,7 @@
 
 */
 
-#include "dmicroBLAS.h"
+#include "microBLAS.h"
 
 // return x'*x
 double dnorm2(unsigned int n, double *dx)

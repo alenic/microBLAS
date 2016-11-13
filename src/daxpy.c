@@ -13,7 +13,7 @@
 
 */
 
-#include "dmicroBLAS.h"
+#include "microBLAS.h"
 
 void daxpy (unsigned int n, double da, double *dx, double *dy)
 {

@@ -13,13 +13,30 @@
 
 */
 
-#include "dmicroBLAS.h"
+#include "microBLAS.h"
 
-// Set a vector to a constant value
-void dset(unsigned int n, double *dx, const double *da)
+double ddot(unsigned int n, double *dx, double *dy)
 {
-	int i;
-	for(i=0; i<n; i++) {
-		dx[i] = *da;
+	unsigned int i, m;
+	double dxdy;
+	
+	m = n-3;
+	i = 1;
+	
+	dxdy=dx[0]*dy[0];
+	while(i < m)
+	{
+		dxdy += dx[i]*dy[i];
+		dxdy += dx[i+1]*dy[i+1];
+		dxdy += dx[i+2]*dy[i+2];
+		dxdy += dx[i+3]*dy[i+3];
+		i += 4;
 	}
+	while(i < n)
+	{
+		dxdy += dx[i]*dy[i];
+		++i;
+	}
+
+	return dxdy;
 }

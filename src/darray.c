@@ -12,9 +12,8 @@
  
 
 */
+#include "microBLAS.h"
 
-#include "dmicroBLAS.h"
-
-double *dzeros(unsigned int n) {
-	return (double *)calloc (n, sizeof(double));
+double *darray(unsigned int n) {
+	return (double *)malloc(n*sizeof(double));
 }

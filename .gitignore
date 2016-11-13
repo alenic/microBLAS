@@ -4,10 +4,6 @@
 *.obj
 *.elf
 
-# Precompiled Headers
-*.gch
-*.pch
-
 # Libraries
 *.lib
 *.a
@@ -24,13 +20,3 @@
 *.exe
 *.out
 *.app
-*.i*86
-*.x86_64
-*.hex
-
-# Debug files
-*.dSYM/
-*.su
-
-# local todo folder
-todo

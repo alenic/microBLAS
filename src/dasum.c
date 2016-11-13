@@ -13,27 +13,19 @@
 
 */
 
-#include "dmicroBLAS.h"
+#include "microBLAS.h"
 
-// y=da*y
-void dscal(unsigned int n, double da, double *dy)
+double dasum(unsigned int n, double *dx)
 {
 	unsigned int i;
+	double sum = 0.0;
 	
-	if(da == 1.0)
+	for(i=0; i<n; i++)
 	{
-		return;
+		if(dx[i] < 0)
+			sum = sum - dx[i];
+		else
+			sum = sum + dx[i];
 	}
-	
-	if(da == 0.0)
-	{
-		for(i=0;i<n;i++) {
-			dy[i]=0.0;
-		}
-		return;
-	}
-	
-	for(i=0;i<n;i++) {
-		dy[i]=da*dy[i];
-	}
+	return sum;
 }

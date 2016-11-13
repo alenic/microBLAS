@@ -16,7 +16,33 @@ Include all precision subroutines of microBLAS library
 #ifndef MICRO_BLAS_H
 #define MICRO_BLAS_H
 
-// Double subroutines
-#include "dmicroBLAS.h"
+#ifdef __cpp
+	extern "C" {
+#endif
+
+	// BLAS Level 1
+	double *darray(unsigned int);
+	double *dzeros(unsigned int);
+	void dset(unsigned int, double *, const double *);
+	void dcopy(unsigned int, double *, const double *);
+
+	double ddot(unsigned int n, double *dx, double *dy);
+	void daxpy (unsigned int n, double da, double *dx, double *dy);
+	void daxpby(unsigned int n, double da, double *dx, double db, double *dy);
+	void dscal(unsigned int n, double da, double *dy);
+	void dvcal(unsigned int n, double da, double *dx, double *dy);
+	double dsum(unsigned int n, double *dx);
+	double dasum(unsigned int n, double *dx);
+	void dswap(unsigned int n, double *dx, double *dy);
+	double dnorm2(unsigned int n, double *dx);
+	unsigned int dimin(unsigned int n, double *dx);
+	unsigned int dimax(unsigned int n, double *dx);
+
+	// BLAS Level 2
+	void dgemv(unsigned int m, unsigned int n, double da, double *A, unsigned int lda, double *dx, double db, double *dy);
+
+#ifdef __cpp
+    }
+#endif
 
 #endif  // EF_BLAS_H

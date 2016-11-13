@@ -13,30 +13,22 @@
 
 */
 
-#include "dmicroBLAS.h"
+#include "microBLAS.h"
 
-double ddot(unsigned int n, double *dx, double *dy)
+unsigned int dimin(unsigned int n, double *dx)
 {
-	unsigned int i, m;
-	double dxdy;
+	unsigned int i,i_min;
+	register double min=dx[0],dxx;
 	
-	m = n-3;
-	i = 1;
-	
-	dxdy=dx[0]*dy[0];
-	while(i < m)
+	for(i=1;i<n;i++)
 	{
-		dxdy += dx[i]*dy[i];
-		dxdy += dx[i+1]*dy[i+1];
-		dxdy += dx[i+2]*dy[i+2];
-		dxdy += dx[i+3]*dy[i+3];
-		i += 4;
-	}
-	while(i < n)
-	{
-		dxdy += dx[i]*dy[i];
-		++i;
+		dxx=dx[i];
+		if(dxx<min)
+		{
+			min=dxx;
+			i_min=i;
+		}
 	}
 
-	return dxdy;
+	return i_min;
 }

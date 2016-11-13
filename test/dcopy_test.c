@@ -1,4 +1,6 @@
-#include "double_test.h"
+#include "gtest/gtest.h"
+#include "microBLAS.h"
+
 
 TEST(dcopy, test_base) {
 	double 	dact1[1], dexp1[]={1.0},

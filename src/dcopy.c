@@ -13,7 +13,7 @@
 
 */
 
-#include "dmicroBLAS.h"
+#include "microBLAS.h"
 
 void dcopy(unsigned int n, double *dx, const double *dy)
 {

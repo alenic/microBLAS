@@ -13,22 +13,17 @@
 
 */
 
-#include "dmicroBLAS.h"
-
-unsigned int dimax(unsigned int n, double *dx)
+#include "microBLAS.h"
+// dx <-> dy
+void dswap(unsigned int n, double *dx, double *dy)
 {
-	unsigned int i,i_max;
-	register double max=dx[0],dxx;
+	unsigned int i;
+	register double c;
 	
-	for(i=1;i<n;i++)
+	for(i=0;i<n;i++)
 	{
-		dxx=dx[i];
-		if(dxx>max)
-		{
-			max=dxx;
-			i_max=i;
-		}
+		c=dx[i];
+		dx[i]=dy[i];
+		dy[i]=c;
 	}
-
-	return i_max;
 }

@@ -13,17 +13,29 @@
 
 */
 
-#include "dmicroBLAS.h"
-// dx <-> dy
-void dswap(unsigned int n, double *dx, double *dy)
+#include "microBLAS.h"
+
+// y=da*x
+void dvcal(unsigned int n, double da, double *dx, double *dy)
 {
 	unsigned int i;
-	register double c;
-	
-	for(i=0;i<n;i++)
+	if(da == 0.0)
 	{
-		c=dx[i];
-		dx[i]=dy[i];
-		dy[i]=c;
+		for(i=0;i<n;i++) {
+			dy[i]=0.0;
+		}
+		return;
+	}
+	
+	if(da == 1.0)
+	{
+		for(i=0;i<n;i++) {
+			dy[i]=dx[i];
+		}
+		return;
+	}
+	// If da is a double number
+	for(i=0;i<n;i++) {
+		dy[i]=da*dx[i];
 	}
 }
