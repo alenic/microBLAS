@@ -9,11 +9,12 @@ TEST(dcopy, test_base) {
 			dact4[4], dexp4[]={1.0,1.0,1.0,1.0},
 			dactn[16], dexpn[]={1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
 
-	dcopy(1, dact1, dexp1);
-	dcopy(2, dact2, dexp2);
-	dcopy(3, dact3, dexp3);
-	dcopy(4, dact4, dexp4);
-	dcopy(16, dactn, dexpn);
+	dcopy(1, dexp1, dact1);
+	dcopy(2, dexp2, dact2);
+	dcopy(3, dexp3, dact3);
+	dcopy(4, dexp4, dact4);
+	dcopy(16, dexpn, dactn);
+
     for (int i=0; i<1; i++) {
 	    SCOPED_TRACE(i);
 	    ASSERT_EQ(dact1[i],dexp1[i]);

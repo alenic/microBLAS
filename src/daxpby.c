@@ -1,24 +1,19 @@
 /*
-            _                  ____  _        _    ____  
-  _ __ ___ (_) ___ _ __ ___   | __ )| |      / \  / ___| 
- | '_ ` _ \| |/ __| '__/ _ \  |  _ \| |     / _ \ \___ \ 
- | | | | | | | (__| | | (_) | | |_) | |___ / ___ \ ___) |
- |_| |_| |_|_|\___|_|  \___/  |____/|_____/_/   \_\____/ 
+           _                  ____  _        _    ____  
+ _ __ ___ (_) ___ _ __ ___   | __ )| |      / \  / ___| 
+| '_ ` _ \| |/ __| '__/ _ \  |  _ \| |     / _ \ \___ \ 
+| | | | | | | (__| | | (_) | | |_) | |___ / ___ \ ___) |
+|_| |_| |_|_|\___|_|  \___/  |____/|_____/_/   \_\____/ 
 
- Author: Alessandro Nicolosi
- 
----------------------------------------------------------
-
- 
+Author: Alessandro Nicolosi
 
 */
-
 #include "microBLAS.h"
 
 void daxpby(unsigned int n, double da, double *dx, double db, double *dy)
 {
 	long int i, m;
-	register double rda = da, rdb=db;
+	double rda = da, rdb=db;
 	
 	if(rda == 0.0) {asb_dscal(n,rdb,dy); return; }
 	if(rdb == 0.0) {asb_dvcal(n,rda,dx,dy); return; }

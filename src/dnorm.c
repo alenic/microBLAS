@@ -9,15 +9,16 @@ Author: Alessandro Nicolosi
 
 */
 #include "microBLAS.h"
+#include <math.h>
 
-// Return the dot product of two vector: x1'*x2
-double ddot(unsigned int n, const double *dx1, const double *dx2) {
+// Return the norm of a vector x: sqrt(x'*x)
+double dnorm(unsigned int n, const double *dx) {
 	double sum=0.0;
 
 	do {
 		--n;
-		sum += dx1[n]*dx2[n];
+		sum += dx[n]*dx[n];
 	} while(n);
 
-	return sum;
+	return sqrt(sum);
 }

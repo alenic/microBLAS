@@ -1,25 +1,21 @@
 /*
-            _                  ____  _        _    ____  
-  _ __ ___ (_) ___ _ __ ___   | __ )| |      / \  / ___| 
- | '_ ` _ \| |/ __| '__/ _ \  |  _ \| |     / _ \ \___ \ 
- | | | | | | | (__| | | (_) | | |_) | |___ / ___ \ ___) |
- |_| |_| |_|_|\___|_|  \___/  |____/|_____/_/   \_\____/ 
+           _                  ____  _        _    ____  
+ _ __ ___ (_) ___ _ __ ___   | __ )| |      / \  / ___| 
+| '_ ` _ \| |/ __| '__/ _ \  |  _ \| |     / _ \ \___ \ 
+| | | | | | | (__| | | (_) | | |_) | |___ / ___ \ ___) |
+|_| |_| |_|_|\___|_|  \___/  |____/|_____/_/   \_\____/ 
 
- Author: Alessandro Nicolosi
- 
----------------------------------------------------------
-
- 
+Author: Alessandro Nicolosi
 
 */
+#include "microBLAS.h"
 
 #include "microBLAS.h"
 
-// Set a vector to a constant value
-void dset(unsigned int n, double *dx, const double *da)
-{
-	int i;
-	for(i=0; i<n; i++) {
-		dx[i] = *da;
-	}
+// Set a vector y to a constant value a: y[i]=a (i=0,...,n-1)
+void dset(unsigned int n, const double *da, double *dy) {
+	do {
+		--n;
+		dy[n] = *da;
+	} while(n);
 }
