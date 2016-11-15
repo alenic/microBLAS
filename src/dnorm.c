@@ -13,12 +13,5 @@ Author: Alessandro Nicolosi
 
 // Return the norm of a vector x: sqrt(x'*x)
 double dnorm(unsigned int n, const double *dx) {
-	double sum=0.0;
-
-	do {
-		--n;
-		sum += dx[n]*dx[n];
-	} while(n);
-
-	return sqrt(sum);
+	return sqrt(dnorm2(n,dx));
 }

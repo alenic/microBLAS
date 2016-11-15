@@ -28,13 +28,14 @@ Include all precision subroutines of microBLAS library
 	void dswap(unsigned int n, double *, double *);
 
 	double ddot(unsigned int n, const double *, const double *);
+	double dnorm(unsigned int n, const double *);
 	double dnorm2(unsigned int n, const double *);
 	double dsum(unsigned int n, const double *);
 	double dasum(unsigned int n, const double *);
-	unsigned int dmin(unsigned int n, const double *);
-	unsigned int dmax(unsigned int n, const double *);
-	unsigned int dimin(unsigned int n, const double *);
-	unsigned int dimax(unsigned int n, const double *);
+	double dmin(unsigned int n, const double *);
+	double dmax(unsigned int n, const double *);
+	unsigned int dimin(unsigned int n, const double *, double *min);
+	unsigned int dimax(unsigned int n, const double *, double *max);
 
 
 

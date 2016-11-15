@@ -1,34 +1,30 @@
 /*
-            _                  ____  _        _    ____  
-  _ __ ___ (_) ___ _ __ ___   | __ )| |      / \  / ___| 
- | '_ ` _ \| |/ __| '__/ _ \  |  _ \| |     / _ \ \___ \ 
- | | | | | | | (__| | | (_) | | |_) | |___ / ___ \ ___) |
- |_| |_| |_|_|\___|_|  \___/  |____/|_____/_/   \_\____/ 
+           _                  ____  _        _    ____  
+ _ __ ___ (_) ___ _ __ ___   | __ )| |      / \  / ___| 
+| '_ ` _ \| |/ __| '__/ _ \  |  _ \| |     / _ \ \___ \ 
+| | | | | | | (__| | | (_) | | |_) | |___ / ___ \ ___) |
+|_| |_| |_|_|\___|_|  \___/  |____/|_____/_/   \_\____/ 
 
- Author: Alessandro Nicolosi
- 
----------------------------------------------------------
-
- 
+Author: Alessandro Nicolosi
 
 */
-
 #include "microBLAS.h"
 
-unsigned int dimin(unsigned int n, double *dx)
+// Return the index of the minimum value of the vector x and assign the vaue to the
+// scalar minval
+unsigned int dimin(unsigned int n, const double *dx, double *minval)
 {
-	unsigned int i,i_min;
-	register double min=dx[0],dxx;
-	
-	for(i=1;i<n;i++)
-	{
-		dxx=dx[i];
-		if(dxx<min)
-		{
-			min=dxx;
-			i_min=i;
+	double im;
+	--n;
+	im = n;
+	*minval = dx[n];
+	while(n) {
+		--n;
+		if(dx[n] < *minval) {
+			*minval = dx[n];
+			im = n;
 		}
 	}
 
-	return i_min;
+	return im;
 }

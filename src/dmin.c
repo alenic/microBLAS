@@ -9,15 +9,19 @@ Author: Alessandro Nicolosi
 
 */
 #include "microBLAS.h"
-
-// Return the squared norm of a vector x:  x'*x
-double dnorm2(unsigned int n, const double *dx) {
-	double sum=0.0;
-
-	do {
+#include <stdio.h>
+// Return the minimum value of the vector x 
+double dmin(unsigned int n, const double *dx)
+{
+	double minval;
+	--n;
+	minval = dx[n];
+	while(n) {
 		--n;
-		sum += dx[n]*dx[n];
-	} while(n);
+		if(dx[n] < minval) {
+			minval = dx[n];
+		}
+	}
 
-	return sum;
+	return minval;
 }

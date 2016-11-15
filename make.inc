@@ -1,12 +1,12 @@
 # Compiler
 CC=gcc
 CPP=g++
-CFLAGS=-O3 -fPIC
+CFLAGS=-O3
 CPPFLAGS=-O3 -D__cpp
 
 # Static lib
 LIB_VERSION=1.0.0
-LIB_OBJECTS=darray.o dzeros.o dset.o dcopy.o dasum.o ddot.o dswap.o
+LIB_OBJECTS=darray.o dzeros.o dset.o dcopy.o dsum.o dasum.o ddot.o dswap.o dnorm.o dnorm2.o dmin.o dimin.o
 LIB_A_TARGET=libmicroBLAS.a
 
 # Dynamic lib
