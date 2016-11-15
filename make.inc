@@ -6,7 +6,7 @@ CPPFLAGS=-O3 -D__cpp
 
 # Static lib
 LIB_VERSION=1.0.0
-LIB_OBJECTS=darray.o dzeros.o dset.o dcopy.o dasum.o ddot.o
+LIB_OBJECTS=darray.o dzeros.o dset.o dcopy.o dasum.o ddot.o dswap.o
 LIB_A_TARGET=libmicroBLAS.a
 
 # Dynamic lib

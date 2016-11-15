@@ -10,8 +10,6 @@ Author: Alessandro Nicolosi
 */
 #include "microBLAS.h"
 
-#include "microBLAS.h"
-
 // Set a vector y to a constant value a: y[i]=a (i=0,...,n-1)
 void dset(unsigned int n, const double *da, double *dy) {
 	do {

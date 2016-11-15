@@ -25,7 +25,7 @@ Include all precision subroutines of microBLAS library
 	double *dzeros(unsigned int);
 	void dset(unsigned int, const double *, double *);
 	void dcopy(unsigned int, const double *, double *);
-	void dswap(unsigned int n, const double *, const double *);
+	void dswap(unsigned int n, double *, double *);
 
 	double ddot(unsigned int n, const double *, const double *);
 	double dnorm2(unsigned int n, const double *);
