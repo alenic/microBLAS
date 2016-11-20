@@ -23,7 +23,7 @@ Include all precision subroutines of microBLAS library
 	// BLAS Level 1
 	double *darray(unsigned int);
 	double *dzeros(unsigned int);
-	void dset(unsigned int, const double *, double *);
+	void dset(unsigned int, const double, double *);
 	void dcopy(unsigned int, const double *, double *);
 	void dswap(unsigned int n, double *, double *);
 
@@ -34,17 +34,12 @@ Include all precision subroutines of microBLAS library
 	double dasum(unsigned int n, const double *);
 	double dmin(unsigned int n, const double *);
 	double dmax(unsigned int n, const double *);
-	unsigned int dimin(unsigned int n, const double *, double *min);
-	unsigned int dimax(unsigned int n, const double *, double *max);
+	unsigned int dimin(unsigned int n, const double *, double *);
+	unsigned int dimax(unsigned int n, const double *, double *);
 
-
-
-	void daxpy (unsigned int n, double da, double *dx, double *dy);
-	void daxpby(unsigned int n, double da, double *dx, double db, double *dy);
-	void dscal(unsigned int n, double da, double *dy);
-	void dvcal(unsigned int n, double da, double *dx, double *dy);
-	
-	
+	void dscal(unsigned int n, const double, double *);
+    void dvcal(unsigned int n, const double, const double *, double *);
+	void daxpy (unsigned int n, const double, const double *, double *);
 
 	// BLAS Level 2
 	void dgemv(unsigned int m, unsigned int n, double da, double *A, unsigned int lda, double *dx, double db, double *dy);

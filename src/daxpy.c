@@ -1,65 +1,30 @@
 /*
-            _                  ____  _        _    ____  
-  _ __ ___ (_) ___ _ __ ___   | __ )| |      / \  / ___| 
- | '_ ` _ \| |/ __| '__/ _ \  |  _ \| |     / _ \ \___ \ 
- | | | | | | | (__| | | (_) | | |_) | |___ / ___ \ ___) |
- |_| |_| |_|_|\___|_|  \___/  |____/|_____/_/   \_\____/ 
+           _                  ____  _        _    ____  
+ _ __ ___ (_) ___ _ __ ___   | __ )| |      / \  / ___| 
+| '_ ` _ \| |/ __| '__/ _ \  |  _ \| |     / _ \ \___ \ 
+| | | | | | | (__| | | (_) | | |_) | |___ / ___ \ ___) |
+|_| |_| |_|_|\___|_|  \___/  |____/|_____/_/   \_\____/ 
 
- Author: Alessandro Nicolosi
- 
----------------------------------------------------------
-
- 
+Author: Alessandro Nicolosi
 
 */
-
 #include "microBLAS.h"
 
-void daxpy (unsigned int n, double da, double *dx, double *dy)
+// Add scalar times real vector x to real vector y: y=da*x+y
+void daxpy (unsigned int n, const double da, const double *dx, double *dy)
 {
-	long int i, m;
-	register double rda = da;
-	
-	if(rda == 1.0)
-	{
-		m=n-3;
-		i=0;
-//-----------------> perform operations with loop unrolling
-		while(i < m)
-		{
-			dy[i]   += dx[i];
-			dy[i+1] += dx[i+1];
-			dy[i+2] += dx[i+2];
-			dy[i+3] += dx[i+3];
-			i += 4;
-		}
-//-----------------> perform operations to the rest of array 
-		while(i < n)
-		{
-			dy[i] += dx[i];
-			++i;
-		}
+	if(da == 0.0) {
 		return;
 	}
-	
-	if(rda != 0.0)
-	{
-		m=n-3;
-		i=0;
-//-----------------> perform operations with loop unrolling
-		while(i < m)
-		{
-			dy[i]   += rda*dx[i];
-			dy[i+1] += rda*dx[i+1];
-			dy[i+2] += rda*dx[i+2];
-			dy[i+3] += rda*dx[i+3];
-			i += 4;
-		}
-//-----------------> perform operations to the rest of array 
-		while(i < n)
-		{
-			dy[i] += rda*dx[i];
-			++i;
-		}
+	if(da == 1.0) {
+		do {
+			--n;
+			dy[n] += dx[n];
+		} while(n);
+	} else {
+		do {
+			--n;
+			dy[n] += da*dx[n];
+		} while(n);
 	}
 }
