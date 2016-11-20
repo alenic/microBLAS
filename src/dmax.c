@@ -10,18 +10,18 @@ Author: Alessandro Nicolosi
 */
 #include "microBLAS.h"
 
-// Return the minimum value of the vector x 
-double dmin(unsigned int n, const double *dx)
+// Return the maximum value of the vector x 
+double dmax(unsigned int n, const double *dx)
 {
-	double minval;
+	double maxval;
 	--n;
-	minval = dx[n];
+	maxval = dx[n];
 	while(n) {
 		--n;
-		if(dx[n] < minval) {
-			minval = dx[n];
+		if(dx[n] > maxval) {
+			maxval = dx[n];
 		}
 	}
 
-	return minval;
+	return maxval;
 }

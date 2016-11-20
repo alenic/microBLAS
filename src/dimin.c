@@ -14,7 +14,7 @@ Author: Alessandro Nicolosi
 // scalar minval
 unsigned int dimin(unsigned int n, const double *dx, double *minval)
 {
-	double im;
+	unsigned int im;
 	--n;
 	im = n;
 	*minval = dx[n];
