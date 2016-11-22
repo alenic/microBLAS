@@ -13,14 +13,12 @@ Author: Alessandro Nicolosi
 // Scale a vector by a scalar da: y=da*y
 void dscal(unsigned int n, const double da, double *dy)
 {
-	if(da == 1.0) {
-		return;
-	}
 	if(da == 0.0) {
 		dset(n, 0.0, dy);
+	} else if(da != 1.0) {
+		do {
+			--n;
+			dy[n] = da*dy[n];
+		} while(n);
 	}
-	do {
-		--n;
-		dy[n] = da*dy[n];
-	} while(n);
 }

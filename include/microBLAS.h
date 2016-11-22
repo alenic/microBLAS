@@ -42,7 +42,7 @@ Include all precision subroutines of microBLAS library
 	void daxpy (unsigned int n, const double, const double *, double *);
 
 	// BLAS Level 2
-	void dgemv(unsigned int m, unsigned int n, double da, double *A, unsigned int lda, double *dx, double db, double *dy);
+	void dgemv(unsigned int m, unsigned int n, unsigned int lda, const double da, const double *A, double *dx, const double db, double *dy);
 
 #ifdef __cpp
     }
