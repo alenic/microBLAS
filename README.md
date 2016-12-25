@@ -1,6 +1,6 @@
 # microBLAS
 
-A simple, tiny and efficient BLAS (Basic Linear Algebra Subroutines) library, designed for PC and Microcontrollers.
+A simple, tiny and efficient BLAS (Basic Linear Algebra Subprograms) library, designed for PC and Microcontrollers.
 
 TODO:
 - Level 3 Dgemm routine (y = da*A*B + db*y)
