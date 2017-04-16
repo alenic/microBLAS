@@ -11,7 +11,7 @@ TODO:
                                            ...
 
 
-# microBLAS's directory structure
+## microBLAS's directory structure
 
 In the root folder:
   * **include**: Inlcude files
@@ -22,7 +22,22 @@ In the root folder:
 
   
 
- # Install
- 
-$ make
+ ## Install
+
+
+1. Install Google Test framework before. Follow instructions in [Google Test](https://github.com/google/googletest)
+
+2. Modify the Google Test section in `make.inc` with the right folders where is installed google test
+```
+# Google test header file
+GTEST_H=../googletest/googletest/include
+# Google test library
+GTEST_LIB=../googletest/googlemock/gtest/libgtest.a
+```
+ 3. In terminal
+
+```
+$ make all
+```
+
 
