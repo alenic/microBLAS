@@ -22,7 +22,7 @@ In the root folder:
 
   
 
- ## Install
+ ## Installation
 
 
 1. Install Google Test framework before. Follow instructions in [Google Test](https://github.com/google/googletest)
