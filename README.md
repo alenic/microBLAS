@@ -1,5 +1,9 @@
 # microBLAS
 
+```
+sudo apt install gtest-dev
+```
+
 A simple, tiny and efficient BLAS (Basic Linear Algebra Subprograms) library, designed for PC and Microcontrollers.
 
 TODO:

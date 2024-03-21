@@ -2,8 +2,8 @@
 #include "microBLAS.h"
 
 
-TEST(daxpy, test_base) {
-	double da1=2.5,
+TEST(test_vaxpy, test_base) {
+	RealType da1=2.5,
 		   x1[]={1.0},
 		   y1[]={2.0},
 		   dexp1[]={4.5},
@@ -26,10 +26,10 @@ TEST(daxpy, test_base) {
 
 	double eps = 1e-16;
 	// generic da tests
-	daxpy(1, da1, x1, y1);
-	daxpy(2, da2, x2, y2);
-	daxpy(3, da3, x3, y3);
-	daxpy(4, da4, x4, y4);
+	vaxpy(1, da1, x1, y1);
+	vaxpy(2, da2, x2, y2);
+	vaxpy(3, da3, x3, y3);
+	vaxpy(4, da4, x4, y4);
 
     for (int i=0; i<1; i++) {
 	    SCOPED_TRACE(i);
@@ -50,10 +50,10 @@ TEST(daxpy, test_base) {
 
 
 	// da=1 tests
-	daxpy(1, 1.0, x1, y1);
-	daxpy(2, 1.0, x2, y2);
-	daxpy(3, 1.0, x3, y3);
-	daxpy(4, 1.0, x4, y4);
+	vaxpy(1, 1.0, x1, y1);
+	vaxpy(2, 1.0, x2, y2);
+	vaxpy(3, 1.0, x3, y3);
+	vaxpy(4, 1.0, x4, y4);
 
     for (int i=0; i<1; i++) {
 	    SCOPED_TRACE(i);
