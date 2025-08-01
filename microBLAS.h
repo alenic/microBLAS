@@ -5,7 +5,9 @@
  | | | | | | | (__| | | (_) | | |_) | |___ / ___ \ ___) |
  |_| |_| |_|_|\___|_|  \___/  |____/|_____/_/   \_\____/ 
 
- Author: Alessandro Nicolosi
+author: Alessandro Nicolosi
+website: https://github.com/alenic/microBLAS
+license: MIT
 */
 
 #ifndef MICRO_BLAS_H
@@ -120,16 +122,42 @@ static inline void vaxpy(unsigned int n, const RealType a, const RealType *x, Re
     if(a == 0.0) {
         return;
     }
-    if(a == 1.0) {
+    else if(a == 1.0) {
         for(unsigned int i = 0; i<n; i++)
             y[i] += x[i];
+    }
+    else if(a == -1.0) {
+        for(unsigned int i = 0; i<n; i++)
+            y[i] -= x[i];
     } else {
         for(unsigned int i = 0; i<n; i++)
             y[i] += a*x[i];
     }
 }
 
-// return the dot product <a, b>
+// return the sum of the components of the vector x
+static inline RealType vsum(unsigned int n, const RealType *x) {
+    RealType sum = 0.0;
+    for(unsigned int i = 0; i<n; i++)
+        sum += x[i];
+
+    return sum;
+}
+
+// Return the elementwise multiply: y = x1 * x2
+static inline void vmul(unsigned int n, const RealType *x1, const RealType *x2, RealType *y) {
+    for (unsigned int i = 0; i < n; i++)
+        y[i] = x1[i] * x2[i];
+}
+
+// Return the elementwise divide: y = x1 / x2
+static inline void vdiv(unsigned int n, const RealType *x1, const RealType *x2, RealType *y) {
+    for (unsigned int i = 0; i < n; i++)
+        y[i] = x1[i] / x2[i];
+}
+
+
+// return the dot product: <a, b>
 static inline RealType dot(unsigned int n, const RealType *a, const RealType *b) {
     RealType sum = 0.0;
     unsigned int i = 0;
@@ -148,17 +176,9 @@ static inline RealType dot(unsigned int n, const RealType *a, const RealType *b)
     return sum;
 }
 
-// return the sum of the components of the vector x
-static inline RealType vsum(unsigned int n, const RealType *x) {
-    RealType sum = 0.0;
-    for(unsigned int i = 0; i<n; i++)
-        sum += x[i];
-
-    return sum;
-}
 
 // return the L2-squared norm of a vector x
-static inline RealType l2_sq(unsigned int n, const RealType *x) {
+static inline RealType l2sq(unsigned int n, const RealType *x) {
     RealType sum = 0.0;
 
     for(unsigned int i = 0; i<n; i++)
@@ -169,11 +189,11 @@ static inline RealType l2_sq(unsigned int n, const RealType *x) {
 
 // return the L2 norm of a vector x
 static inline RealType l2(unsigned int n, const RealType *x) {
-    return (RealType)sqrt(l2_sq(n, x));
+    return (RealType)sqrt(l2sq(n, x));
 }
 
 // return the L2-squared norm of the vector x1-x2
-static inline RealType l2_dist_sq(unsigned int n, const RealType *x1, const RealType *x2) {
+static inline RealType l2distsq(unsigned int n, const RealType *x1, const RealType *x2) {
     RealType sum = 0.0;
     RealType delta;
     for(unsigned int i = 0; i<n; i++) {
@@ -185,8 +205,8 @@ static inline RealType l2_dist_sq(unsigned int n, const RealType *x1, const Real
 }
 
 // return the L2 norm of the vector x1-x2
-static inline RealType l2_dist(unsigned int n, const RealType *x1, const RealType *x2) {
-    return (RealType)sqrt(l2_dist_sq(n, x1, x2));
+static inline RealType l2dist(unsigned int n, const RealType *x1, const RealType *x2) {
+    return (RealType)sqrt(l2distsq(n, x1, x2));
 }
 
 // return the L1 norm of a vector x
@@ -200,6 +220,22 @@ static inline RealType l1(unsigned int n, const RealType *x) {
     }
 
     return sum;
+}
+
+// return the L-inf norm of a vector x
+static inline RealType linf(unsigned int n, const RealType *x) {
+    if (n == 0) return 0;
+    RealType max_val = fabs(x[0]);
+    for (unsigned int i = 1; i < n; i++) {
+        RealType val = fabs(x[i]);
+        if (val > max_val) max_val = val;
+    }
+    return max_val;
+}
+
+// return the L-inf norm of a vector x
+static inline RealType vamax(unsigned int n, const RealType *x) {
+    return linf(n, x);
 }
 
 // return the minimum value of the vector x
@@ -269,6 +305,22 @@ static inline unsigned int vimax(unsigned int n, const RealType *x) {
     return max_index;
 }
 
+// return the index of the maximum absolute value of the vector x
+static inline unsigned int viamax(unsigned int n, const RealType *x) {
+    if (n == 0) return 0;
+
+    unsigned int idx = 0;
+    RealType max_val = fabs(x[0]);
+    for (unsigned int i = 1; i < n; i++) {
+        RealType val = fabs(x[i]);
+        if (val > max_val) {
+            max_val = val;
+            idx = i;
+        }
+    }
+    return idx;
+}
+
 // ============================ Matrix ================================
 
 // allocate and return the pointer of the an empty vector (not initialized)
@@ -305,7 +357,35 @@ static inline void mfree(RealType *m) {
         free(m);
 }
 
-// general cumulative matrix-vector multiplication: y = A*x + b*y (WARNING it doesn't check len(x) == cols)
+// Transpose the matrix A: AT = A^T
+static inline void mtranspose(unsigned int rows, unsigned int cols,
+                              const RealType *A, RealType *AT) {
+    for (unsigned int i = 0; i < rows; i++) {
+        for (unsigned int j = 0; j < cols; j++) {
+            AT[j*rows + i] = A[i*cols + j];
+        }
+    }
+}
+
+// Y = A + B
+static inline void madd(unsigned int rows, unsigned int cols,
+                        const RealType *A, const RealType *B, RealType *Y) {
+    unsigned int n = rows * cols;
+    for (unsigned int i = 0; i < n; i++)
+        Y[i] = A[i] + B[i];
+}
+
+
+// Y = a*Y
+static inline void mscale(unsigned int rows, unsigned int cols,
+                          RealType a, RealType *Y) {
+
+    unsigned int n = rows * cols;
+    for (unsigned int i = 0; i < n; i++)
+        Y[i] *= a;
+}
+
+// General cumulative matrix-vector multiplication: y = A*x + b*y (WARNING it doesn't check len(x) == cols)
 static inline void gemv(unsigned int rows, unsigned int cols, const RealType *A, const RealType *x, RealType b, RealType *y)
 {
     unsigned int ilda=0;
@@ -338,13 +418,22 @@ static inline void gemm(unsigned int rows_x1, unsigned int cols_x1, unsigned int
 
                 for (unsigned int i = ii; i < i_max; i++) {
                     for (unsigned int j = jj; j < j_max; j++) {
-                        RealType sum = (kk == 0)
-                            ? ( (b == 0.0) ? 0.0 : (b == 1.0 ? Y[i*cols_x2 + j] : b*Y[i*cols_x2 + j]) )
-                            : Y[i*cols_x2 + j];
+                        RealType sum;
+
+                        if (kk == 0) {
+                            // First block: scale Y
+                            if (b == 0.0) sum = 0.0;
+                            else if (b == 1.0) sum = Y[i*cols_x2 + j];
+                            else sum = b * Y[i*cols_x2 + j];
+                        } else {
+                            // Later blocks: keep accumulating
+                            sum = Y[i*cols_x2 + j];
+                        }
 
                         for (unsigned int k = kk; k < k_max; k++) {
                             sum += X1[i*cols_x1 + k] * X2[k*cols_x2 + j];
                         }
+
                         Y[i*cols_x2 + j] = sum;
                     }
                 }

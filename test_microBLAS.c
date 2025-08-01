@@ -1,3 +1,15 @@
+/*
+            _                  ____  _        _    ____  
+  _ __ ___ (_) ___ _ __ ___   | __ )| |      / \  / ___| 
+ | '_ ` _ \| |/ __| '__/ _ \  |  _ \| |     / _ \ \___ \ 
+ | | | | | | | (__| | | (_) | | |_) | |___ / ___ \ ___) |
+ |_| |_| |_|_|\___|_|  \___/  |____/|_____/_/   \_\____/ 
+
+author: Alessandro Nicolosi
+website: https://github.com/alenic/microBLAS
+license: MIT
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -54,6 +66,23 @@ int main(void) {
     vaxpy(3, 2.0, x1, y2); // y = 2*x + y
     ASSERT(y2[0] == 3 && y2[2] == 3, "vaxpy computes a*x + y");
 
+    RealType vA[3] = {2, 4, 6};
+    RealType vB[3] = {1, 2, 3};
+    RealType vRes[3] = {0, 0, 0};
+
+    vmul(3, vA, vB, vRes);
+    ASSERT(vRes[0] == 2 && vRes[1] == 8 && vRes[2] == 18, "vmul multiplies elementwise");
+
+    vdiv(3, vA, vB, vRes);
+    ASSERT(vRes[0] == 2.0/1.0 && vRes[1] == 2.0 && vRes[2] == 2.0, "vdiv divides elementwise");
+
+    RealType vC[4] = {-3, 7, -2, 5};
+    RealType lInf = linf(4, vC);
+    ASSERT(lInf == 7, "linf computes L-infinity norm");
+
+    unsigned int idxMaxAbs = viamax(4, vC);
+    ASSERT(idxMaxAbs == 1, "viamax finds index of max absolute value");
+
     // ----------------- Norms and reductions -----------------
     RealType d = dot(3, arr, arr);
     ASSERT(fabs(d - 14.0) < 1e-6, "dot computes dot product");
@@ -61,18 +90,18 @@ int main(void) {
     RealType s = vsum(3, arr);
     ASSERT(fabs(s - 6.0) < 1e-6, "vsum computes sum");
 
-    RealType l2s = l2_sq(3, arr);
-    ASSERT(fabs(l2s - 14.0) < 1e-6, "l2_sq computes squared L2 norm");
+    RealType l2s = l2sq(3, arr);
+    ASSERT(fabs(l2s - 14.0) < 1e-6, "l2sq computes squared L2 norm");
 
     RealType l2n = l2(3, arr);
     ASSERT(fabs(l2n - sqrt(14.0)) < 1e-6, "l2 computes L2 norm");
 
     RealType arr2[3] = {2, 3, 4};
-    RealType l2ds = l2_dist_sq(3, arr, arr2);
-    ASSERT(fabs(l2ds - 3.0) < 1e-6, "l2_dist_sq works");
+    RealType l2ds = l2distsq(3, arr, arr2);
+    ASSERT(fabs(l2ds - 3.0) < 1e-6, "l2distsq works");
 
-    RealType l2d = l2_dist(3, arr, arr2);
-    ASSERT(fabs(l2d - sqrt(3.0)) < 1e-6, "l2_dist works");
+    RealType l2d = l2dist(3, arr, arr2);
+    ASSERT(fabs(l2d - sqrt(3.0)) < 1e-6, "l2dist works");
 
     RealType arr3[3] = {-1, 2, -3};
     RealType l1n = l1(3, arr3);
@@ -96,6 +125,18 @@ int main(void) {
     RealType *M3 = mcreate_const(2, 2, 4.0);
     ASSERT(M3[0] == 4 && M3[3] == 4, "mcreate_const initializes to constant");
     mfree(M3);
+
+    // ----------------- Matrix operations -----------------
+    RealType MA[4] = {1, 2, 3, 4};
+    RealType MB[4] = {5, 6, 7, 8};
+    RealType MC[4] = {0, 0, 0, 0};
+
+    madd(2, 2, MA, MB, MC);
+    ASSERT(MC[0] == 6 && MC[3] == 12, "madd adds matrices elementwise");
+
+    mscale(2, 2, 2.0, MC);
+    ASSERT(MC[0] == 12 && MC[3] == 24, "mscale scales a matrix");
+
 
     // ----------------- gemv -----------------
     RealType A[6] = {1, 2, 3, 4, 5, 6}; // 2x3 matrix row-major
