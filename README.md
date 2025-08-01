@@ -1,18 +1,32 @@
 # microBLAS
 
+A simple, tiny and efficient BLAS (Basic Linear Algebra Subprograms) library, designed for PC and Microcontrollers. It is a single header file
 
+ ## Usage
 
-A simple, tiny and efficient BLAS (Basic Linear Algebra Subprograms) library, designed for PC and Microcontrollers.
+Just include microBLAS.h directly in your own project to use it
 
- ## Installation
-
-Install Google Test framework before. Follow instructions in [Google Test](https://github.com/google/googletest) or
 ```
-sudo apt install gtest-dev
-```
-Launch make
-```
-$ make
+#include "microBLAS.h"
+
+//... Your code
 ```
 
 
+## Test
+
+To test it just type in a terminal:
+
+```
+# Build the test program
+make
+
+# Run the tests
+make run
+```
+To clean up
+
+```
+# Clean up
+make clean
+```

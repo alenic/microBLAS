@@ -1,27 +1,24 @@
-# Compiler
-CC=gcc
-CPP=g++
-CFLAGS=-O3
-CPPFLAGS=-O3
+# Compiler and flags
+CC      := gcc
+CFLAGS  := -O2 -Wall -Wextra -std=c11
+LDFLAGS := -lm
 
-# Test
-EXECUTABLE=mainTest.out
+# Targets
+TARGET  := test_microBLAS
+SRC     := test_microBLAS.c
 
-LOCAL_TEST_PATH=./test
+# Default target
+all: $(TARGET)
 
-default: all
+$(TARGET): $(SRC) microBLAS.h
+	$(CC) $(CFLAGS) -o $(TARGET) $(SRC) $(LDFLAGS)
 
-all: test
+# Run tests
+run: $(TARGET)
+	./$(TARGET)
 
-test: $(LOCAL_TEST_PATH)/$(EXECUTABLE)
-
-test/$(EXECUTABLE): $(LOCAL_TEST_PATH)/*.c microBLAS/microBLAS.h microBLAS/microBLAS.c
-	$(CPP) $(CPPFLAGS) -o $(EXECUTABLE) $(LOCAL_TEST_PATH)/*.c microBLAS/microBLAS.c -ImicroBLAS/ -I$(LOCAL_TEST_PATH) -lgtest -lpthread
-	@echo "****************** Test: $(EXECUTABLE) [OK] ******************"
-
-# Clean
+# Clean build files
 clean:
-	(test $(EXECUTABLE) && rm $(EXECUTABLE) || true)
-	@echo "****************** Clean [OK] ******************"
+	rm -f $(TARGET)
 
-.PHONY: clean
+.PHONY: all run clean
