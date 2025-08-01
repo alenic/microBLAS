@@ -4,7 +4,7 @@ CFLAGS  := -O2 -Wall -Wextra -std=c11
 LDFLAGS := -lm
 
 # Targets
-TARGET  := test_microBLAS
+TARGET  := test_microBLAS.out
 SRC     := test_microBLAS.c
 
 # Default target
