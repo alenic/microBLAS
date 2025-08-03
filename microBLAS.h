@@ -22,7 +22,9 @@ license: MIT
 #endif
 
 // For dgemm cache
-#define BLOCK_SIZE 64
+#ifndef BLOCK_SIZE
+    #define BLOCK_SIZE 64
+#endif
 
 #ifdef __cplusplus
     extern "C" {
@@ -367,33 +369,35 @@ static inline void mtranspose(unsigned int rows, unsigned int cols,
     }
 }
 
-// Y = A + B
+// C = A + B
 static inline void madd(unsigned int rows, unsigned int cols,
-                        const RealType *A, const RealType *B, RealType *Y) {
+                        const RealType *A, const RealType *B, RealType *C) {
     unsigned int n = rows * cols;
     for (unsigned int i = 0; i < n; i++)
-        Y[i] = A[i] + B[i];
+        C[i] = A[i] + B[i];
 }
 
 
-// Y = a*Y
+// Y = alpha*Y
 static inline void mscale(unsigned int rows, unsigned int cols,
-                          RealType a, RealType *Y) {
+                          RealType alpha, RealType *Y) {
 
     unsigned int n = rows * cols;
     for (unsigned int i = 0; i < n; i++)
-        Y[i] *= a;
+        Y[i] *= alpha;
 }
 
-// General cumulative matrix-vector multiplication: y = A*x + b*y (WARNING it doesn't check len(x) == cols)
-static inline void gemv(unsigned int rows, unsigned int cols, const RealType *A, const RealType *x, RealType b, RealType *y)
+// General cumulative matrix-vector multiplication: y = A*x + alpha*y (WARNING it doesn't check len(x) == cols)
+static inline void gemv(unsigned int rows, unsigned int cols, const RealType *A, const RealType *x, RealType alpha, RealType *y)
 {
     unsigned int ilda=0;
     for(unsigned int i=0; i<rows; i++) {
-        RealType sum = (b == 0.0 ? 0.0 : (b == 1.0 ? y[i] : b*y[i]));
+        RealType sum = (alpha == 0.0 ? 0.0 : (alpha == 1.0 ? y[i] : alpha*y[i]));
+
         for(unsigned int j=0; j<cols; j++) {
             sum += A[ilda+j]*x[j];
         }
+
         y[i] = sum;
         ilda += cols;
     }
@@ -401,40 +405,40 @@ static inline void gemv(unsigned int rows, unsigned int cols, const RealType *A,
 
 
 // General matrix-matrix multiplication with accumulation
-// Y = X1 * X2 + b * Y
-// X1: (rows_x1, cols_x1)
-// X2: (cols_x1, cols_x2)
-// Y:  (rows_x1, cols_x2)
-static inline void gemm(unsigned int rows_x1, unsigned int cols_x1, unsigned int cols_x2,
-                        const RealType *X1, const RealType *X2, RealType *Y, RealType b) {
+// C = A * B + alpha * C
+// A: (rows_a, cols_a)
+// B: (cols_a, cols_b)
+// C:  (rows_a, cols_b)
+static inline void gemm(unsigned int rows_a, unsigned int cols_a, unsigned int cols_b,
+                        const RealType *A, const RealType *B, RealType alpha, RealType *C) {
 
-    for (unsigned int ii = 0; ii < rows_x1; ii += BLOCK_SIZE) {
-        for (unsigned int jj = 0; jj < cols_x2; jj += BLOCK_SIZE) {
-            for (unsigned int kk = 0; kk < cols_x1; kk += BLOCK_SIZE) {
+    for (unsigned int ii = 0; ii < rows_a; ii += BLOCK_SIZE) {
+        for (unsigned int jj = 0; jj < cols_b; jj += BLOCK_SIZE) {
+            for (unsigned int kk = 0; kk < cols_a; kk += BLOCK_SIZE) {
 
-                unsigned int i_max = (ii + BLOCK_SIZE < rows_x1) ? ii + BLOCK_SIZE : rows_x1;
-                unsigned int j_max = (jj + BLOCK_SIZE < cols_x2) ? jj + BLOCK_SIZE : cols_x2;
-                unsigned int k_max = (kk + BLOCK_SIZE < cols_x1) ? kk + BLOCK_SIZE : cols_x1;
+                unsigned int i_max = (ii + BLOCK_SIZE < rows_a) ? ii + BLOCK_SIZE : rows_a;
+                unsigned int j_max = (jj + BLOCK_SIZE < cols_b) ? jj + BLOCK_SIZE : cols_b;
+                unsigned int k_max = (kk + BLOCK_SIZE < cols_a) ? kk + BLOCK_SIZE : cols_a;
 
                 for (unsigned int i = ii; i < i_max; i++) {
                     for (unsigned int j = jj; j < j_max; j++) {
                         RealType sum;
 
                         if (kk == 0) {
-                            // First block: scale Y
-                            if (b == 0.0) sum = 0.0;
-                            else if (b == 1.0) sum = Y[i*cols_x2 + j];
-                            else sum = b * Y[i*cols_x2 + j];
+                            // First block: scale C
+                            if (alpha == 0.0) sum = 0.0;
+                            else if (alpha == 1.0) sum = C[i*cols_b + j];
+                            else sum = alpha * C[i*cols_b + j];
                         } else {
                             // Later blocks: keep accumulating
-                            sum = Y[i*cols_x2 + j];
+                            sum = C[i*cols_b + j];
                         }
 
                         for (unsigned int k = kk; k < k_max; k++) {
-                            sum += X1[i*cols_x1 + k] * X2[k*cols_x2 + j];
+                            sum += A[i*cols_a + k] * B[k*cols_b + j];
                         }
 
-                        Y[i*cols_x2 + j] = sum;
+                        C[i*cols_b + j] = sum;
                     }
                 }
             }

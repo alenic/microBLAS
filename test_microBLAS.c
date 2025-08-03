@@ -149,7 +149,7 @@ int main(void) {
     RealType X1[6] = {1, 2, 3, 4, 5, 6}; // 2x3
     RealType X2[6] = {7, 8, 9, 10, 11, 12}; // 3x2
     RealType Y[4] = {0, 0, 0, 0}; // 2x2
-    gemm(2, 3, 2, X1, X2, Y, 0.0); // Y = X1*X2
+    gemm(2, 3, 2, X1, X2, 0.0, Y); // Y = X1*X2
     ASSERT(fabs(Y[0] - 58.0) < 1e-6 && fabs(Y[1] - 64.0) < 1e-6 &&
            fabs(Y[2] - 139.0) < 1e-6 && fabs(Y[3] - 154.0) < 1e-6,
            "gemm works");

@@ -4,18 +4,28 @@ CFLAGS  := -O2 -Wall -Wextra -std=c11
 LDFLAGS := -lm
 
 # Targets
-TARGET  := test_microBLAS.out
-SRC     := test_microBLAS.c
+TEST_TARGET  := test_microBLAS.out
+TEST_SRC     := test_microBLAS.c
+
+# Benchmarks
+BENCHMARKS_TARGET := benchmarks_microblas.out
+BENCHMARKS_SRC := benchmarks_microblas.c
 
 # Default target
-all: $(TARGET)
+all: $(TEST_TARGET) $(BENCHMARKS_TARGET)
 
-$(TARGET): $(SRC) microBLAS.h
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRC) $(LDFLAGS)
+$(TEST_TARGET): $(TEST_SRC) microBLAS.h
+	$(CC) $(CFLAGS) -o $(TEST_TARGET) $(TEST_SRC) $(LDFLAGS)
 
 # Run tests
-run: $(TARGET)
-	./$(TARGET)
+run: $(TEST_TARGET)
+	./$(TEST_TARGET)
+
+$(BENCHMARKS_TARGET): $(BENCHMARKS_SRC) microBLAS.h
+	$(CC) $(CFLAGS) -o $(BENCHMARKS_TARGET) $(BENCHMARKS_SRC) $(LDFLAGS)
+
+
+benchmarks: $(BENCHMARKS_TARGET)
 
 # Clean build files
 clean:
