@@ -24,6 +24,69 @@ license: MIT
         printf("[PASS] %s\n", msg); \
     }} while (0)
 
+
+void gemm_base() {
+    RealType X1[6] = {1, 2, 3, 4, 5, 6}; // 2x3
+    RealType X2[6] = {7, 8, 9, 10, 11, 12}; // 3x2
+    RealType Y[4] = {0, 0, 0, 0}; // 2x2
+    gemm(2, 3, 2, X1, X2, 0.0, Y); // Y = X1*X2
+
+    ASSERT(fabs(Y[0] - 58.0) < 1e-6 && fabs(Y[1] - 64.0) < 1e-6 &&
+           fabs(Y[2] - 139.0) < 1e-6 && fabs(Y[3] - 154.0) < 1e-6,
+           "gemm works");
+}
+
+void integration_test1() {
+    // C = A*B + B = A*(B + I)
+    unsigned int M = 256, N=128;
+    int passed = 1;
+
+    RealType *A = mcreate_empty(M, N);
+    RealType *B = mcreate_empty(N, N);
+    RealType *C1 = mcreate_empty(M, N);
+    RealType *C2 = mcreate_empty(M, N);
+    RealType *TMP = mcreate_empty(N, N);
+    RealType *diag = vcreate_const(N, 1.0);
+    
+    // Create A,B random
+    for(unsigned int i=0; i<M*N; i++) {
+        A[i] = (RealType)rand()/(RealType)(RAND_MAX);
+    }
+    for(unsigned int i=0; i<N*N; i++) {
+        B[i] = (RealType)rand()/(RealType)(RAND_MAX);
+    }
+
+    // C1 = A*B
+    gemm(M, N, N, A, B, 0.0, C1);
+    // C1 = C1 + B = A*B + B
+    madd(N, N, C1, B, C1);
+
+    // Compute C2 = A*(B+I)
+    // TMP = B+I
+    madddiag(N, B, diag, TMP);
+    // C2 = A*TMP = A*(B+I)
+    gemm(M, N, N, A, TMP, 0.0, C2);
+
+    for(unsigned int i=0; i<M*N; i++) {
+        if (fabs(C1[i] - C2[i]) > 1e-6) {
+            passed = 0;
+            printf("C1[%d]-C2[%d] = %f", i, i, fabs(C1[i] - C2[i]));
+            break;
+        }
+    }
+
+    mfree(A);
+    mfree(B);
+    mfree(C1);
+    mfree(C2);
+    mfree(TMP);
+    vfree(diag);
+
+    ASSERT(passed, "integration_test1");
+}
+
+
+
 int main(void) {
     printf("=== microBLAS Test Suite ===\n");
 
@@ -146,13 +209,10 @@ int main(void) {
     ASSERT(fabs(yv[0] - 6.0) < 1e-6 && fabs(yv[1] - 15.0) < 1e-6, "gemv works");
 
     // ----------------- gemm -----------------
-    RealType X1[6] = {1, 2, 3, 4, 5, 6}; // 2x3
-    RealType X2[6] = {7, 8, 9, 10, 11, 12}; // 3x2
-    RealType Y[4] = {0, 0, 0, 0}; // 2x2
-    gemm(2, 3, 2, X1, X2, 0.0, Y); // Y = X1*X2
-    ASSERT(fabs(Y[0] - 58.0) < 1e-6 && fabs(Y[1] - 64.0) < 1e-6 &&
-           fabs(Y[2] - 139.0) < 1e-6 && fabs(Y[3] - 154.0) < 1e-6,
-           "gemm works");
+    gemm_base();
+    
+    // ----------------- Integration tests -----------------
+    integration_test1();
 
     printf("\nAll tests passed successfully!\n");
     return 0;

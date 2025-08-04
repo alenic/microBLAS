@@ -19,6 +19,7 @@ Designed for both **PC** and **microcontrollers**, implemented as a **single hea
 - Works on desktop and embedded systems
 - Lightweight alternative to heavy BLAS libraries
 
+**The matrix format is row major order**
 
 ## Usage
 

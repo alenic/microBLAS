@@ -21,6 +21,18 @@ license: MIT
     typedef float RealType;
 #endif
 
+
+// Select real type and corresponding math functions
+#ifdef REAL_TYPE_DOUBLE
+    typedef double RealType;
+    #define REAL_SQRT(x) sqrt(x)
+    #define REAL_ABS(x) fabs(x)
+#else
+    typedef float RealType;
+    #define REAL_SQRT(x) sqrtf(x)
+    #define REAL_ABS(x) fabsf(x)
+#endif
+
 // For dgemm cache
 #ifndef BLOCK_SIZE
     #define BLOCK_SIZE 64
@@ -30,425 +42,444 @@ license: MIT
     extern "C" {
 #endif
 
+// This is a vector
+typedef struct {
+    RealType *data;
+    size_t n;
+} Vector;
 
+// This is a matrix
+typedef struct {
+    RealType *data;
+    size_t rows;
+    size_t cols;
+} Matrix;
+
+typedef enum {
+    MB_SUCCESS = 0,     // success
+    MB_ERR_ALLOC,       // memory allocation failed
+    MB_ERR_DIM_MISMATCH,// invalid dimensions
+    MB_ERR_NULL_PTR,    // null pointer passed
+    MB_ERR_DIV_BY_ZERO,    // division by 0
+    MB_ERR_UNKNOWN      // fallback error
+} MBError;
 
 // ============================ Vectors ================================
 
-// allocate and return the pointer of the an empty vector (not initialized)
-static inline RealType *vcreate_empty(unsigned int n) {
-    RealType *ptr = (RealType *)malloc(n*sizeof(RealType));
-    if (!ptr) return NULL;
-    return ptr;
+// helper function to valid a Vector
+static inline MBError vvalid(const Vector *a) {
+    if (a == NULL)                // Null pointer for the vector itself
+        return MB_ERR_NULL_PTR;
+    if (a->n > 0 && a->data == NULL) // Non-zero length but no data buffer
+        return MB_ERR_ALLOC;
+    return MB_SUCCESS;
 }
 
-// allocate and return the pointer of the vector (0,0,...0)
-static inline RealType *vcreate_zero(unsigned int n) {
-    RealType *ptr = (RealType *)calloc(n, sizeof(RealType));
-    if (!ptr) return NULL;
-    return ptr;
+// check that a and b are same length
+static inline MBError vvalid2(const Vector *a, const Vector *b) {
+    MBError err;
+    if ((err = vvalid(a)) != MB_SUCCESS) return err;
+    if ((err = vvalid(b)) != MB_SUCCESS) return err;
+    if (a->n != b->n)   return MB_ERR_DIM_MISMATCH;
+    return MB_SUCCESS;
 }
 
-// allocate and return the pointer of the the vector (a,a,...a)
-static inline RealType *vcreate_const(unsigned int n, const RealType a) {
-    RealType *vector = vcreate_empty(n);
-
-    if (!vector) return NULL;
-
-    for(unsigned int i = 0; i<n; i++)
-        vector[i] = a;
-    return vector;
+// check a, b and destination y all same length
+static inline MBError vvalid3(const Vector *y, const Vector *a, const Vector *b) {
+    MBError err;
+    if ((err = vvalid(y)) != MB_SUCCESS) return err;
+    if (y->n != a->n) return MB_ERR_DIM_MISMATCH;
+    if ((err = vvalid2(a, b)) != MB_SUCCESS) return err;
+    return MB_SUCCESS;
 }
 
-// Free vector memory
-static inline void vfree(RealType *v) {
-    if(v != NULL)
-        free(v);
-}
+// allocate an empty vector (not initialized)
+static inline MBError vcreate_empty(Vector *v, size_t n) {
+    if (v == NULL) return MB_ERR_NULL_PTR;
+    v->n = n;
 
-// allocate and return the pointer of the the vector (min_range, min_range+1,...,max_range-1)
-static inline RealType *vcreate_range(const RealType min_range, const RealType max_range) {
-    if(min_range >= max_range) return NULL;
-
-    unsigned int n = (unsigned int)(max_range - min_range);
-    if (n == 0) return NULL;
-
-    RealType *vector = vcreate_empty(n);
-    if (!vector) return NULL;
-
-    RealType value = min_range;
-
-    for(unsigned int i = 0; i<n; i++)
-        vector[i] = value++;
-
-    return vector;
-}
-
-// y = (a,a,...,a)
-static inline void vset_const(unsigned int n, const RealType a, RealType *y) {
-    for(unsigned int i = 0; i<n; i++)
-        y[i] = a;
-}
-
-// y = x
-static inline void vcopy(unsigned int n, const RealType *x, RealType *y) {
-    for(unsigned int i = 0; i<n; i++)
-        y[i] = x[i];
-}
-
-
-// y = a*y
-static inline void vscale(unsigned int n, const RealType a, RealType *y)
-{
-    if (a == 0.0) {
-        for (unsigned int i = 0; i < n; i++)
-            y[i] = 0.0;
-        
-        return;
-    }
-    if (a == 1.0) return;
-
-    for (unsigned int i = 0; i < n; i++)
-        y[i] *= a;
-}
-
-// y = x1 + x2
-static inline void vxpx(unsigned int n, const RealType *x1, const RealType *x2, RealType *y)
-{
-    for(unsigned int i = 0; i<n; i++)
-        y[i] += x1[i] + x2[i];
-}
-
-// y = a*x + y
-static inline void vaxpy(unsigned int n, const RealType a, const RealType *x, RealType *y)
-{
-    if(a == 0.0) {
-        return;
-    }
-    else if(a == 1.0) {
-        for(unsigned int i = 0; i<n; i++)
-            y[i] += x[i];
-    }
-    else if(a == -1.0) {
-        for(unsigned int i = 0; i<n; i++)
-            y[i] -= x[i];
+    if (n > 0) {
+        v->data = malloc(n * sizeof *v->data);
+        if (!v->data) return MB_ERR_ALLOC;
     } else {
-        for(unsigned int i = 0; i<n; i++)
-            y[i] += a*x[i];
+        v->data = NULL;
     }
+    return MB_SUCCESS;
 }
 
-// return the sum of the components of the vector x
-static inline RealType vsum(unsigned int n, const RealType *x) {
-    RealType sum = 0.0;
-    for(unsigned int i = 0; i<n; i++)
-        sum += x[i];
+// allocate a zero vector (0,0,...0)
+static inline MBError vcreate_zero(Vector *v, size_t n) {
+    if (v == NULL) return MB_ERR_NULL_PTR;
+    v->n = n;
 
-    return sum;
-}
-
-// Return the elementwise multiply: y = x1 * x2
-static inline void vmul(unsigned int n, const RealType *x1, const RealType *x2, RealType *y) {
-    for (unsigned int i = 0; i < n; i++)
-        y[i] = x1[i] * x2[i];
-}
-
-// Return the elementwise divide: y = x1 / x2
-static inline void vdiv(unsigned int n, const RealType *x1, const RealType *x2, RealType *y) {
-    for (unsigned int i = 0; i < n; i++)
-        y[i] = x1[i] / x2[i];
-}
-
-
-// return the dot product: <a, b>
-static inline RealType dot(unsigned int n, const RealType *a, const RealType *b) {
-    RealType sum = 0.0;
-    unsigned int i = 0;
-
-    // Process 4 elements per iteration
-    for (; i + 4 <= n; i += 4) {
-        sum += a[i] * b[i]
-             + a[i+1] * b[i+1]
-             + a[i+2] * b[i+2]
-             + a[i+3] * b[i+3];
+    if (n > 0) {
+        v->data = calloc(n, sizeof *v->data);
+        if (!v->data) return MB_ERR_ALLOC;
+    } else {
+        v->data = NULL;
     }
-    // Handle remainder
-    for (; i < n; i++) {
-        sum += a[i] * b[i];
+    return MB_SUCCESS;
+}
+
+// allocate a const vector of size n: (value, value,...,value)
+static inline MBError vcreate_const(Vector *v, size_t n, RealType value) {
+    if (v == NULL) return MB_ERR_NULL_PTR;
+    v->n = n;
+    if (n == 0) {
+        v->data = NULL;
+        return MB_SUCCESS;
     }
-    return sum;
+    if (value == (RealType)0) {
+        v->data = calloc(n, sizeof *v->data);
+        if (!v->data) return MB_ERR_ALLOC;
+    } else {
+        v->data = malloc(n * sizeof *v->data);
+        if (!v->data) return MB_ERR_ALLOC;
+        for (size_t i = 0; i < n; i++) v->data[i] = value;
+    }
+    return MB_SUCCESS;
+}
+
+// free vector memory
+static inline MBError vfree(Vector *v) {
+    MBError err = vvalid(v);
+    if (err != MB_SUCCESS) return err;
+    free(v->data);
+    v->data = NULL;
+    v->n = 0;
+    return MB_SUCCESS;
+}
+
+// set all the elements of a vector to a constant alpha:  y = (alpha, alpha,...,alpha)
+static inline MBError vset_const(Vector *y, const RealType alpha) {
+    MBError err = vvalid(y);
+    if (err != MB_SUCCESS) return err;
+
+    for(size_t i = 0; i < y->n; i++)
+        y->data[i] = alpha;
+
+    return MB_SUCCESS;
+}
+
+// y = a
+static inline MBError vcopy(Vector *y, const Vector *a) {
+    MBError err = vvalid2(y, a);
+    if (err != MB_SUCCESS) return err;
+
+    for (size_t i = 0; i < y->n; i++)
+        y->data[i] = a->data[i];
+    return MB_SUCCESS;
+}
+// y = alpha*y
+static inline MBError vscale(Vector *y, const RealType alpha) {
+    MBError err = vvalid(y);
+    if (err != MB_SUCCESS) return err;
+
+    if (alpha == 0.0) {
+        for (size_t i = 0; i < y->n; i++)
+            y->data[i] = 0.0;
+    } else if (alpha != 1.0) {
+        for (size_t i = 0; i < y->n; i++)
+            y->data[i] *= alpha;
+    }
+    return MB_SUCCESS;
+}
+
+// y = a + b
+static inline MBError vadd(Vector *y, const Vector *a, const Vector *b)
+{
+    MBError err = vvalid3(y, a, b);
+    if (err != MB_SUCCESS) return err;
+
+    for(size_t i = 0; i<y->n; i++)
+        y->data[i] = a->data[i] + b->data[i];
+    
+    return MB_SUCCESS;
+}
+
+// y = alpha*a + y
+static inline MBError vaxpy(Vector *y, const RealType alpha, const Vector *a)
+{
+    MBError err = vvalid2(y, a);
+    if (err != MB_SUCCESS) return err;
+
+    if(alpha == 0.0) {
+        return MB_SUCCESS;
+    } else if(alpha == 1.0) {
+        for(size_t i = 0; i<y->n; i++)
+            y->data[i] += a->data[i];
+    } else if(alpha == -1.0) {
+        for(size_t i = 0; i<y->n; i++)
+            y->data[i] -= a->data[i];
+    } else {
+        for(size_t i = 0; i<y->n; i++)
+            y->data[i] += alpha*a->data[i];
+    }
+
+    return MB_SUCCESS;
+}
+
+// return the sum of the components of the vector a
+static inline MBError vsum(RealType *out, const Vector *a) {
+    MBError err = vvalid(a);
+    if (err != MB_SUCCESS) return err;
+
+    RealType sum = 0.0;
+    for(size_t i = 0; i<a->n; i++)
+        sum += a->data[i];
+
+    *out = sum;
+    return MB_SUCCESS;
+}
+
+// return the elementwise multiply: y = a * b
+static inline MBError vmul(Vector *y, const Vector *a, const Vector *b) {
+    MBError err = vvalid3(y, a, b);
+    if (err != MB_SUCCESS) return err;
+
+    for (size_t i = 0; i < y->n; i++)
+        y->data[i] = a->data[i] * b->data[i];
+    
+    return MB_SUCCESS;
+}
+
+// return the elementwise divide: y = x1 / x2
+static inline MBError vdiv(Vector *y, const Vector *a, const Vector *b) {
+    MBError err = vvalid3(y, a, b);
+    if (err != MB_SUCCESS) return err;
+
+    for (size_t i = 0; i < y->n; i++) {
+        if(b->data[i] == 0.0) {
+            return MB_ERR_DIV_BY_ZERO;
+        }
+        y->data[i] = a->data[i] / b->data[i];
+    }
+        
+    return MB_SUCCESS;
 }
 
 
-// return the L2-squared norm of a vector x
-static inline RealType l2sq(unsigned int n, const RealType *x) {
+// return the dot product: out = <a, b>
+static inline MBError vdot(RealType *out, const Vector *a, const Vector *b) {
+    MBError err = vvalid2(a, b);
+    if (err != MB_SUCCESS) return err;
+
+    RealType sum = 0.0;
+    size_t i = 0;
+
+    for (; i + 4 <= a->n; i += 4) {
+        sum += a->data[i] * b->data[i]
+             + a->data[i+1] * b->data[i+1]
+             + a->data[i+2] * b->data[i+2]
+             + a->data[i+3] * b->data[i+3];
+    }
+    for (; i < a->n; i++) {
+        sum += a->data[i] * b->data[i];
+    }
+    *out = sum;
+
+    return MB_SUCCESS;
+}
+
+
+// return the L2-squared norm of the vector a: ||a||^2
+static inline MBError vl2sq(RealType *out, const Vector *a) {
+    MBError err = vvalid(a);
+    if (err != MB_SUCCESS) return err;
+
     RealType sum = 0.0;
 
-    for(unsigned int i = 0; i<n; i++)
-        sum += x[i]*x[i];
+    for(size_t i = 0; i<a->n; i++)
+        sum += a->data[i] * a->data[i];
 
-    return sum;
+    *out = sum;
+
+    return MB_SUCCESS;
 }
 
-// return the L2 norm of a vector x
-static inline RealType l2(unsigned int n, const RealType *x) {
-    return (RealType)sqrt(l2sq(n, x));
+// return the L2 norm of the vector a: ||a||
+static inline MBError vl2(RealType *out, const Vector *a) {
+    MBError err = vl2sq(out, a);
+    if (err != MB_SUCCESS) return err;
+
+    *out = (RealType)sqrt(*out);
+
+    return MB_SUCCESS;
 }
 
-// return the L2-squared norm of the vector x1-x2
-static inline RealType l2distsq(unsigned int n, const RealType *x1, const RealType *x2) {
+// return the L2-squared norm of the vector a-b: ||a-b||^2
+static inline MBError vl2distsq(RealType *out, const Vector *a, const Vector *b) {
+    MBError err = vvalid2(a, b);
+    if (err != MB_SUCCESS) return err;
+
     RealType sum = 0.0;
     RealType delta;
-    for(unsigned int i = 0; i<n; i++) {
-        delta = x1[i] - x2[i];
-        sum += delta*delta;
+
+    for(size_t i = 0; i<a->n; i++) {
+        delta = a->data[i] - b->data[i];
+        sum += delta * delta;
     }
 
-    return sum;
+    *out = sum;
+    return MB_SUCCESS;
 }
 
-// return the L2 norm of the vector x1-x2
-static inline RealType l2dist(unsigned int n, const RealType *x1, const RealType *x2) {
-    return (RealType)sqrt(l2distsq(n, x1, x2));
+// return the L2 norm of the vector a-b: ||a-b||
+static inline MBError vl2dist(RealType *out, const Vector *a, const Vector *b) {
+    MBError err = vl2distsq(out, a, b);
+    if (err != MB_SUCCESS) return err;
+
+    *out = (RealType)sqrt(*out);
+
+    return MB_SUCCESS;
 }
 
-// return the L1 norm of a vector x
-static inline RealType l1(unsigned int n, const RealType *x) {
+// return the L1 norm of the vector a: |a|
+static inline MBError vl1(RealType *out, const Vector *a) {
+    MBError err = vvalid(a);
+    if (err != MB_SUCCESS) return err;
+
     RealType sum = 0.0;
-    for(unsigned int i = 0; i<n; i++) {
-        if(x[i] < 0)
-            sum -= x[i];
+    for(size_t i = 0; i<a->n; i++) {
+        if(a->data[i] < 0)
+            sum -= a->data[i];
         else
-            sum += x[i];
+            sum += a->data[i];
     }
 
-    return sum;
+    *out = sum;
+
+    return MB_SUCCESS;
 }
 
-// return the L-inf norm of a vector x
-static inline RealType linf(unsigned int n, const RealType *x) {
-    if (n == 0) return 0;
-    RealType max_val = fabs(x[0]);
-    for (unsigned int i = 1; i < n; i++) {
-        RealType val = fabs(x[i]);
+// return the L-inf norm of the vector a: |a|_inf
+static inline MBError vlinf(RealType *out, const Vector *a) {
+    MBError err = vvalid(a);
+    if (err != MB_SUCCESS) return err;
+    if (a->n == 0) return MB_ERR_DIM_MISMATCH;
+
+    RealType max_val = (RealType)REAL_ABS(a->data[0]);
+    for (size_t i = 1; i < a->n; i++) {
+        RealType val = (RealType)(a->data[i]);
         if (val > max_val) max_val = val;
     }
-    return max_val;
-}
 
-// return the L-inf norm of a vector x
-static inline RealType vamax(unsigned int n, const RealType *x) {
-    return linf(n, x);
+    *out = max_val;
+
+    return MB_SUCCESS;
 }
 
 // return the minimum value of the vector x
-static inline RealType vmin(unsigned int n, const RealType *x) {
-    if (n == 0) return 0;
+static inline MBError vmin(RealType *out, const Vector *a) {
+    MBError err = vvalid(a);
+    if (err != MB_SUCCESS) return err;
+    if (a->n == 0) return MB_ERR_DIM_MISMATCH;
 
     RealType min_val;
-    min_val = x[0];
-    for(unsigned int i = 1; i<n; i++) {
-        if(x[i] < min_val) {
-            min_val = x[i];
+    min_val = a->data[0];
+    for(size_t i = 1; i<a->n; i++) {
+        if(a->data[i] < min_val) {
+            min_val = a->data[i];
         }
     }
+    *out = min_val;
 
-    return min_val;
+    return MB_SUCCESS;
 }
 
 // return the maximum value of the vector x
-static inline RealType vmax(unsigned int n, const RealType *x) {
-    if (n == 0) return 0;
+static inline MBError vmax(RealType *out, const Vector *a) {
+    MBError err = vvalid(a);
+    if (err != MB_SUCCESS) return err;
+    if (a->n == 0) return MB_ERR_DIM_MISMATCH;
 
     RealType max_val;
-    max_val = x[0];
-    for(unsigned int i = 1; i<n; i++) {
-        if(x[i] > max_val) {
-            max_val = x[i];
+    max_val = a->data[0];
+    for(size_t i = 1; i<a->n; i++) {
+        if(a->data[i] > max_val) {
+            max_val = a->data[i];
         }
     }
 
-    return max_val;
+    *out = max_val;
+
+    return MB_SUCCESS;
 }
 
-// return the index of the minimum value of the vector x
-static inline unsigned int vimin(unsigned int n, const RealType *x) {
-    if (n == 0) return 0;
+// return the max of abs values of the vector a
+static inline MBError vamax(RealType *out, const Vector *a) {
+    MBError err = vlinf(out, a);
+    if (err != MB_SUCCESS) return err;
 
-    unsigned int min_index;
+    return MB_SUCCESS;
+}
+
+
+// return the index of the minimum value of the vector a
+static inline MBError vimin(size_t *out, const Vector *a) {
+    MBError err = vvalid(a);
+    if (err != MB_SUCCESS) return err;
+    if (a->n == 0) return MB_ERR_DIM_MISMATCH;
+
+    size_t min_index;
     RealType min_val;
     min_index = 0;
 
-    min_val = x[0];
-    for(unsigned int i = 1; i<n; i++) {
-        if(x[i] < min_val) {
-            min_val = x[i];
+    min_val = a->data[0];
+    for(size_t i = 1; i<a->n; i++) {
+        if(a->data[i] < min_val) {
+            min_val = a->data[i];
             min_index = i;
         }
     }
 
-    return min_index;
+    *out = min_index;
+
+    return MB_SUCCESS;
 }
 
-// return the index of the maximum value of the vector x
-static inline unsigned int vimax(unsigned int n, const RealType *x) {
-    if (n == 0) return 0;
+// return the index of the maximum value of the vector a
+static inline MBError vimax(size_t *out, const Vector *a) {
+    MBError err = vvalid(a);
+    if (err != MB_SUCCESS) return err;
+    if (a->n == 0) return MB_ERR_DIM_MISMATCH;
 
-    unsigned int max_index;
-    RealType max_val;
-    max_index = 0;
+    size_t max_index = 0;
+    RealType max_val = a->data[0];
 
-    max_val = x[0];
-    for(unsigned int i = 1; i<n; i++) {
-        if(x[i] > max_val) {
-            max_val = x[i];
+    for(size_t i = 1; i<a->n; i++) {
+        if(a->data[i] > max_val) {
+            max_val = a->data[i];
             max_index = i;
         }
     }
-    return max_index;
+
+    *out = max_index;
+
+    return MB_SUCCESS;
 }
 
-// return the index of the maximum absolute value of the vector x
-static inline unsigned int viamax(unsigned int n, const RealType *x) {
-    if (n == 0) return 0;
+// return the index of the maximum absolute value of the vector a
+static inline MBError viamax(size_t *out, const Vector *a) {
+    MBError err = vvalid(a);
+    if (err != MB_SUCCESS) return err;
+    if (a->n == 0) return MB_ERR_DIM_MISMATCH;
 
-    unsigned int idx = 0;
-    RealType max_val = fabs(x[0]);
-    for (unsigned int i = 1; i < n; i++) {
-        RealType val = fabs(x[i]);
+    size_t max_index = 0;
+    RealType max_val = (RealType)REAL_SQRT(a->data[0]);
+
+    for (size_t i = 1; i < a->n; i++) {
+        RealType val = (RealType)REAL_SQRT(a->data[i]);
         if (val > max_val) {
             max_val = val;
-            idx = i;
+            max_index = i;
         }
     }
-    return idx;
+
+    *out = max_index;
+
+    return MB_SUCCESS;
 }
-
-// ============================ Matrix ================================
-
-// allocate and return the pointer of the an empty vector (not initialized)
-static inline RealType *mcreate_empty(unsigned int rows, unsigned int cols) {
-    RealType *ptr = (RealType *)malloc(rows*cols*sizeof(RealType));
-    if (!ptr) return NULL;
-    return ptr;
-}
-
-// allocate and return the pointer of the vector (0,0,...,0)
-static inline RealType *mcreate_zero(unsigned int rows, unsigned int cols) {
-    RealType *ptr = (RealType *)calloc(rows*cols, sizeof(RealType));
-    if (!ptr) return NULL;
-    return ptr;
-}
-
-// allocate and return the pointer of the the vector (a,a,...,a)
-static inline RealType *mcreate_const(unsigned int rows, unsigned int cols, const RealType a) {
-    RealType *matrix = mcreate_empty(rows, cols);
-    if (!matrix) return NULL;
-
-    unsigned int n = rows*cols;
-
-    for(unsigned int i = 0; i<n; i++)
-        matrix[i] = a;
-
-
-    return matrix;
-}
-
-// Free matrix memory
-static inline void mfree(RealType *m) {
-    if(m != NULL)
-        free(m);
-}
-
-// Transpose the matrix A: AT = A^T
-static inline void mtranspose(unsigned int rows, unsigned int cols,
-                              const RealType *A, RealType *AT) {
-    for (unsigned int i = 0; i < rows; i++) {
-        for (unsigned int j = 0; j < cols; j++) {
-            AT[j*rows + i] = A[i*cols + j];
-        }
-    }
-}
-
-// C = A + B
-static inline void madd(unsigned int rows, unsigned int cols,
-                        const RealType *A, const RealType *B, RealType *C) {
-    unsigned int n = rows * cols;
-    for (unsigned int i = 0; i < n; i++)
-        C[i] = A[i] + B[i];
-}
-
-
-// Y = alpha*Y
-static inline void mscale(unsigned int rows, unsigned int cols,
-                          RealType alpha, RealType *Y) {
-
-    unsigned int n = rows * cols;
-    for (unsigned int i = 0; i < n; i++)
-        Y[i] *= alpha;
-}
-
-// General cumulative matrix-vector multiplication: y = A*x + alpha*y (WARNING it doesn't check len(x) == cols)
-static inline void gemv(unsigned int rows, unsigned int cols, const RealType *A, const RealType *x, RealType alpha, RealType *y)
-{
-    unsigned int ilda=0;
-    for(unsigned int i=0; i<rows; i++) {
-        RealType sum = (alpha == 0.0 ? 0.0 : (alpha == 1.0 ? y[i] : alpha*y[i]));
-
-        for(unsigned int j=0; j<cols; j++) {
-            sum += A[ilda+j]*x[j];
-        }
-
-        y[i] = sum;
-        ilda += cols;
-    }
-}
-
-
-// General matrix-matrix multiplication with accumulation
-// C = A * B + alpha * C
-// A: (rows_a, cols_a)
-// B: (cols_a, cols_b)
-// C:  (rows_a, cols_b)
-static inline void gemm(unsigned int rows_a, unsigned int cols_a, unsigned int cols_b,
-                        const RealType *A, const RealType *B, RealType alpha, RealType *C) {
-
-    for (unsigned int ii = 0; ii < rows_a; ii += BLOCK_SIZE) {
-        for (unsigned int jj = 0; jj < cols_b; jj += BLOCK_SIZE) {
-            for (unsigned int kk = 0; kk < cols_a; kk += BLOCK_SIZE) {
-
-                unsigned int i_max = (ii + BLOCK_SIZE < rows_a) ? ii + BLOCK_SIZE : rows_a;
-                unsigned int j_max = (jj + BLOCK_SIZE < cols_b) ? jj + BLOCK_SIZE : cols_b;
-                unsigned int k_max = (kk + BLOCK_SIZE < cols_a) ? kk + BLOCK_SIZE : cols_a;
-
-                for (unsigned int i = ii; i < i_max; i++) {
-                    for (unsigned int j = jj; j < j_max; j++) {
-                        RealType sum;
-
-                        if (kk == 0) {
-                            // First block: scale C
-                            if (alpha == 0.0) sum = 0.0;
-                            else if (alpha == 1.0) sum = C[i*cols_b + j];
-                            else sum = alpha * C[i*cols_b + j];
-                        } else {
-                            // Later blocks: keep accumulating
-                            sum = C[i*cols_b + j];
-                        }
-
-                        for (unsigned int k = kk; k < k_max; k++) {
-                            sum += A[i*cols_a + k] * B[k*cols_b + j];
-                        }
-
-                        C[i*cols_b + j] = sum;
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-
-
 
 #ifdef __cplusplus
     }
