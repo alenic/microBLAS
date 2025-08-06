@@ -26,6 +26,7 @@ $(BENCHMARKS_TARGET): $(BENCHMARKS_SRC) microBLAS.h
 
 
 benchmarks: $(BENCHMARKS_TARGET)
+			./$(BENCHMARKS_TARGET)
 
 # Clean build files
 clean:
