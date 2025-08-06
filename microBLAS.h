@@ -135,7 +135,9 @@ static inline MBError vcreate_const(Vector *v, size_t n, RealType value) {
     } else {
         v->data = malloc(n * sizeof *v->data);
         if (!v->data) return MB_ERR_ALLOC;
-        for (size_t i = 0; i < n; i++) v->data[i] = value;
+
+        for (size_t i = 0; i < n; i++)
+            v->data[i] = value;
     }
     return MB_SUCCESS;
 }
@@ -360,8 +362,9 @@ static inline MBError vlinf(RealType *out, const Vector *a) {
 
     RealType max_val = (RealType)REAL_ABS(a->data[0]);
     for (size_t i = 1; i < a->n; i++) {
-        RealType val = (RealType)(a->data[i]);
-        if (val > max_val) max_val = val;
+        RealType val = (RealType)REAL_ABS(a->data[i]);
+        if (val > max_val)
+            max_val = val;
     }
 
     *out = max_val;
@@ -466,10 +469,10 @@ static inline MBError viamax(size_t *out, const Vector *a) {
     if (a->n == 0) return MB_ERR_DIM_MISMATCH;
 
     size_t max_index = 0;
-    RealType max_val = (RealType)REAL_SQRT(a->data[0]);
+    RealType max_val = (RealType)REAL_ABS(a->data[0]);
 
     for (size_t i = 1; i < a->n; i++) {
-        RealType val = (RealType)REAL_SQRT(a->data[i]);
+        RealType val = (RealType)REAL_ABS(a->data[i]);
         if (val > max_val) {
             max_val = val;
             max_index = i;
@@ -478,6 +481,187 @@ static inline MBError viamax(size_t *out, const Vector *a) {
 
     *out = max_index;
 
+    return MB_SUCCESS;
+}
+
+// ====================== Matrix ==============================
+
+static inline MBError mvalid(const Matrix *m) {
+    if (m == NULL) return MB_ERR_NULL_PTR;
+    if (m->rows * m->cols > 0 && m->data == NULL) return MB_ERR_ALLOC;
+    return MB_SUCCESS;
+}
+
+// check two matrices have same dimensions
+static inline MBError mvalid2(const Matrix *a, const Matrix *b) {
+    MBError err;
+    if ((err = mvalid(a)) != MB_SUCCESS) return err;
+    if ((err = mvalid(b)) != MB_SUCCESS) return err;
+    if (a->rows != b->rows || a->cols != b->cols)
+        return MB_ERR_DIM_MISMATCH;
+    return MB_SUCCESS;
+}
+
+// check y, a, b all same dimensions
+static inline MBError mvalid3(const Matrix *y, const Matrix *a, const Matrix *b) {
+    MBError err;
+    if ((err = mvalid(y)) != MB_SUCCESS) return err;
+    if (y->rows != a->rows || y->cols != a->cols)
+        return MB_ERR_DIM_MISMATCH;
+    if ((err = mvalid2(a,b)) != MB_SUCCESS) return err;
+    return MB_SUCCESS;
+}
+
+// allocate an empty matrix
+static inline MBError mcreate_empty(Matrix *m, size_t rows, size_t cols) {
+    if (m == NULL) return MB_ERR_NULL_PTR;
+    m->rows = rows; m->cols = cols;
+    size_t sz = rows*cols;
+    if (sz > 0) {
+        m->data = malloc(sz * sizeof *m->data);
+        if (!m->data) return MB_ERR_ALLOC;
+    } else {
+        m->data = NULL;
+    }
+    return MB_SUCCESS;
+}
+
+// allocate a zero matrix
+static inline MBError mcreate_zero(Matrix *m, size_t rows, size_t cols) {
+    if (m == NULL) return MB_ERR_NULL_PTR;
+    m->rows = rows; m->cols = cols;
+    size_t sz = rows*cols;
+    if (sz > 0) {
+        m->data = calloc(sz, sizeof *m->data);
+        if (!m->data) return MB_ERR_ALLOC;
+    } else {
+        m->data = NULL;
+    }
+    return MB_SUCCESS;
+}
+
+// allocate a const matrix
+static inline MBError mcreate_const(Matrix *m, size_t rows, size_t cols, RealType a) {
+    MBError err = mcreate_empty(m, rows, cols);
+    if (err != MB_SUCCESS) return err;
+    size_t n = rows*cols;
+    for (size_t i = 0; i < n; i++)
+        m->data[i] = a;
+    return MB_SUCCESS;
+}
+
+// free matrix memory
+static inline MBError mfree(Matrix *m) {
+    MBError err = mvalid(m);
+    if (err != MB_SUCCESS) return err;
+    free(m->data);
+    m->data = NULL;
+    m->rows = m->cols = 0;
+    return MB_SUCCESS;
+}
+
+// Transpose: Y = A^T
+static inline MBError mtranspose(Matrix *Y, const Matrix *A) {
+    MBError err;
+    if ((err = mvalid(A)) != MB_SUCCESS) return err;
+    if ((err = mvalid(Y)) != MB_SUCCESS) return err;
+    if (Y->rows != A->cols || Y->cols != A->rows)
+        return MB_ERR_DIM_MISMATCH;
+    for (size_t i = 0; i < A->rows; i++)
+        for (size_t j = 0; j < A->cols; j++)
+            Y->data[j*A->rows + i] = A->data[i*A->cols + j];
+    return MB_SUCCESS;
+}
+
+// C = A + B
+static inline MBError madd(Matrix *C, const Matrix *A, const Matrix *B) {
+    MBError err = mvalid3(C, A, B);
+    if (err != MB_SUCCESS) return err;
+    size_t n = A->rows * A->cols;
+    for (size_t i = 0; i < n; i++)
+        C->data[i] = A->data[i] + B->data[i];
+    return MB_SUCCESS;
+}
+
+// Y = A + diag(d1,..,dn)
+static inline MBError madddiag(Matrix *Y, const Matrix *A, const Vector *diag) {
+    MBError err;
+    if ((err = mvalid(A)) != MB_SUCCESS) return err;
+    if ((err = vvalid(diag)) != MB_SUCCESS) return err;
+    if (A->rows != A->cols || diag->n != A->rows) return MB_ERR_DIM_MISMATCH;
+    if ((err = mvalid(Y)) != MB_SUCCESS) return err;
+    if (Y->rows != A->rows || Y->cols != A->cols) return MB_ERR_DIM_MISMATCH;
+    size_t n = A->rows, stride = n+1;
+    for (size_t i = 0; i < n; i++)
+        Y->data[i*stride] = A->data[i*stride] + diag->data[i];
+    return MB_SUCCESS;
+}
+
+// Y = alpha * Y
+static inline MBError mscale(Matrix *Y, RealType alpha) {
+    MBError err = mvalid(Y);
+    if (err != MB_SUCCESS) return err;
+    size_t n = Y->rows * Y->cols;
+    for (size_t i = 0; i < n; i++)
+        Y->data[i] *= alpha;
+    return MB_SUCCESS;
+}
+
+// y = A*x + alpha*y
+static inline MBError gemv(Vector *y, const Matrix *A, const Vector *x, RealType alpha) {
+    MBError err;
+    if ((err = mvalid(A)) != MB_SUCCESS) return err;
+    if ((err = vvalid(x)) != MB_SUCCESS) return err;
+    if ((err = vvalid(y)) != MB_SUCCESS) return err;
+    if (A->cols != x->n || A->rows != y->n) return MB_ERR_DIM_MISMATCH;
+    size_t idx = 0;
+    for (size_t i = 0; i < A->rows; i++, idx += A->cols) {
+        RealType sum = (alpha == 0.0 ? 0.0
+                         : (alpha == 1.0 ? y->data[i]
+                                        : alpha*y->data[i]));
+        for (size_t j = 0; j < A->cols; j++)
+            sum += A->data[idx+j] * x->data[j];
+        y->data[i] = sum;
+    }
+    return MB_SUCCESS;
+}
+
+// C = A*B + alpha*C
+static inline MBError gemm(Matrix *C, const Matrix *A, const Matrix *B, RealType alpha) {
+    MBError err;
+    if ((err = mvalid(A)) != MB_SUCCESS) return err;
+    if ((err = mvalid(B)) != MB_SUCCESS) return err;
+    if ((err = mvalid(C)) != MB_SUCCESS) return err;
+    if (A->cols != B->rows || A->rows != C->rows || B->cols != C->cols)
+        return MB_ERR_DIM_MISMATCH;
+
+    for (size_t ii = 0; ii < A->rows; ii += BLOCK_SIZE) {
+        for (size_t jj = 0; jj < B->cols; jj += BLOCK_SIZE) {
+            for (size_t kk = 0; kk < A->cols; kk += BLOCK_SIZE) {
+                
+                size_t i_max = ii + BLOCK_SIZE < A->rows ? ii+BLOCK_SIZE : A->rows;
+                size_t j_max = jj + BLOCK_SIZE < B->cols ? jj+BLOCK_SIZE : B->cols;
+                size_t k_max = kk + BLOCK_SIZE < A->cols ? kk+BLOCK_SIZE : A->cols;
+                
+                for (size_t i = ii; i < i_max; i++) {
+                    for (size_t j = jj; j < j_max; j++) {
+                        RealType sum;
+                        if (kk == 0) {
+                            // First block: scale C
+                            if (alpha == 0.0) sum = 0.0;
+                            else if (alpha == 1.0) sum = C->data[i*C->cols + j];
+                            else sum = alpha * C->data[i*C->cols + j];
+                        } else {
+                            sum = C->data[i*C->cols + j];
+                        }
+                        for (size_t k = kk; k < k_max; k++)
+                            sum += A->data[i*A->cols + k] * B->data[k*B->cols + j];
+                        C->data[i*C->cols + j] = sum;
+                    }
+                }
+            }
+        }
+    }
     return MB_SUCCESS;
 }
 

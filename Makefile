@@ -4,12 +4,12 @@ CFLAGS  := -O2 -Wall -Wextra -std=c11
 LDFLAGS := -lm
 
 # Targets
-TEST_TARGET  := test_microBLAS.out
-TEST_SRC     := test_microBLAS.c
+TEST_TARGET  := tests.out
+TEST_SRC     := tests.c
 
 # Benchmarks
-BENCHMARKS_TARGET := benchmarks_microblas.out
-BENCHMARKS_SRC := benchmarks_microblas.c
+BENCHMARKS_TARGET := benchmarks.out
+BENCHMARKS_SRC := benchmarks.c
 
 # Default target
 all: $(TEST_TARGET) $(BENCHMARKS_TARGET)

@@ -1,112 +1,208 @@
+# microBLAS
 ```
             _                  ____  _        _    ____  
-  _ __ ___ (_) ___ _ __ ___   | __ )| |      / \  / ___| 
- | '_ ` _ \| |/ __| '__/ _ \  |  _ \| |     / _ \ \___ \ 
+  _ __ ___ (_) ___ _ __ ___   | __ )| |      / \  / ___|
+ | '_ ` _ \| |/ __| '__/ _ \  |  _ \| |     / _ \ \___ \
  | | | | | | | (__| | | (_) | | |_) | |___ / ___ \ ___) |
- |_| |_| |_|_|\___|_|  \___/  |____/|_____/_/   \_\____/ 
+ |_| |_| |_|_|\___|_|  \___/  |____/|_____/__ /   \_\____/
 ```
 
-A simple, tiny, and efficient BLAS (Basic Linear Algebra Subprograms) library.  
-Designed for both **PC** and **microcontrollers**, implemented as a **single header file**.
+A simple, header-only implementation of BLAS (Basic Linear Algebra Subprograms), optimized for both **desktop** and **embedded** systems using a minimal C API.
+Designed for ease of integration into small numerical projects or microcontroller code bases.
 
-- Header-only: just `#include "microBLAS.h"`
-- No external dependencies (`libm` only if using `<math.h>`)
-- Supports both `float` and `double` precision via a macro
-- Implements essential BLAS routines:
-  - **Level 1 (Vector):** dot product, norms (L1, L2, L∞), scaling, addition
-  - **Level 2 (Matrix–Vector):** `gemv`
-  - **Level 3 (Matrix–Matrix):** `gemm` with optional accumulation `+ b*Y`
-- Works on desktop and embedded systems
-- Lightweight alternative to heavy BLAS libraries
+* **Header-only** (just `#include "microBLAS.h"`)
+* No external dependencies beyond the C standard library (`<stdlib.h>`, `<math.h>`)
+* Supports both `float` (default) and `double` precision via `REAL_TYPE_DOUBLE`
+* Implements essential BLAS routines:
 
-**The matrix format is row major order**
+  * **Level 1 (Vector):** allocation, deallocation, copy, scale, add, A·X+Y (`axpy`), dot product, norms (L1, L2, L∞), min/max, index-of-min/max
+  * **Level 2 (Matrix–Vector):** `gemv`
+  * **Level 3 (Matrix–Matrix):** blocked `gemm` with accumulation
 
-## Usage
+**Row-major** storage for matrices.
 
-Include microBLAS.h in your c file
+---
 
+## Quickstart
+
+1. **Include the header** in your C source:
+
+   ```c
+   #include "microBLAS.h"
+   ```
+
+2. **Choose precision** (optional). By default, `RealType` is `float`. To use `double`, either:
+
+   ```c
+   #define REAL_TYPE_DOUBLE
+   #include "microBLAS.h"
+   ```
+
+   or pass at compile time:
+
+   ```sh
+   gcc -DREAL_TYPE_DOUBLE -o your_program your_program.c -lm
+   ```
+
+3. **Compile** your program as usual:
+
+   ```sh
+   gcc -o example example.c -lm
+   ```
+
+---
+
+## Core Types
 
 ```c
-#include "microBLAS.h"
+// Vector of length n
+typedef struct {
+    RealType *data;
+    size_t     n;
+} Vector;
 
-int main() {
-    RealType v[3] = {1, 2, 3};
-    RealType norm = l2(3, v);
-}
+// Matrix with rows×cols elements (row-major)
+typedef struct {
+    RealType *data;
+    size_t    rows;
+    size_t    cols;
+} Matrix;
+
+// Error codes returned by each function (MBError)
+enum { MB_SUCCESS, MB_ERR_ALLOC, MB_ERR_DIM_MISMATCH, MB_ERR_NULL_PTR, MB_ERR_DIV_BY_ZERO, MB_ERR_UNKNOWN };
 ```
 
-By default, RealType is float.
+Memory management and validity checks are performed in each routine to help catch errors.
 
-To switch to double, define the macro before including:
-
-```c
-#define REAL_TYPE_DOUBLE
-#include "microBLAS.h"
-
-int main() {
-    RealType x = 3.14159;
-    // x is a double now
-}
-```
-
-or pass it at compile time:
-
-
-```
-gcc -DREAL_TYPE_DOUBLE -o your_program your_program.c -lm
-```
+---
 
 ## Examples
 
-### Vector Operations
+### Vector Allocation and Operations
+
 ```c
-RealType a[3] = {1, 2, 3};
-RealType b[3] = {4, 5, 6};
-RealType y[3] = {0, 0, 0};
+#include "microBLAS.h"
+#include <stdio.h>
 
-vaxpy(3, 2.0, a, y); // y = 2*a + y
-RealType dotp = dot(3, a, b); // dot product
-RealType norm = l2(3, a);     // L2 norm
+int main(void) {
+    // Create vectors a and b of length 3
+    Vector a, b, y;
+    vcreate_const(&a, 3, (RealType)1.0);   // a = [1, 1, 1]
+    vcreate_const(&b, 3, (RealType)2.0);   // b = [2, 2, 2]
+    vcreate_zero(&y, 3);                  // y = [0, 0, 0]
+
+    // y = 2*a + y
+    vaxpy(&y, (RealType)2.0, &a);
+
+    // dot product a·b
+    RealType dp;
+    vdot(&dp, &a, &b);
+    printf("dot(a,b) = %f\n", dp);
+
+    // L2 norm of a
+    RealType norm;
+    vl2(&norm, &a);
+    printf("||a||₂ = %f\n", norm);
+
+    // Cleanup
+    vfree(&a);
+    vfree(&b);
+    vfree(&y);
+    return 0;
+}
 ```
 
-### Matrix–Vector Multiplication
+### Matrix–Vector Multiplication (`gemv`)
+
 ```c
-RealType A[6] = {1, 2, 3, 4, 5, 6}; // 2x3 matrix
-RealType x[3] = {1, 1, 1};
-RealType y[2] = {0, 0};
+#include "microBLAS.h"
+#include <stdio.h>
 
-gemv(2, 3, A, x, 0.0, y); // y = A*x
+int main(void) {
+    // Define a 2×3 matrix A and vector x of length 3
+    Matrix A;
+    Vector x, y;
+
+    mcreate_const(&A, 2, 3, (RealType)1.0); // A = [[1 1 1], [1 1 1]]
+    vcreate_const(&x, 3, (RealType)1.0);     // x = [1, 1, 1]
+    vcreate_zero(&y, 2);                     // y = [0, 0]
+
+    // Compute y = A*x + 0·y
+    gemv(&y, &A, &x, (RealType)0.0);
+
+    printf("y = [%f, %f]\n", y.data[0], y.data[1]);
+
+    mfree(&A);
+    vfree(&x);
+    vfree(&y);
+    return 0;
+}
 ```
 
-### Matrix–Matrix Multiplication
+### Matrix–Matrix Multiplication (`gemm`)
+
 ```c
-RealType X1[6] = {1, 2, 3, 4, 5, 6};     // 2x3
-RealType X2[6] = {7, 8, 9, 10, 11, 12};  // 3x2
-RealType Y[4]  = {0, 0, 0, 0};           // 2x2
+#include "microBLAS.h"
+#include <stdio.h>
 
-gemm(2, 3, 2, X1, X2, Y, 0.0); // Y = X1*X2
+int main(void) {
+    Matrix A, B, C;
+
+    // A: 2×3, B: 3×2
+    mcreate_empty(&A, 2, 3);
+    mcreate_empty(&B, 3, 2);
+    mcreate_zero(&C, 2, 2);
+
+    // Fill A = [[1,2,3], [4,5,6]]
+    for (size_t i = 0; i < 6; ++i) A.data[i] = (RealType)(i + 1);
+    // Fill B = [[7,8], [9,10], [11,12]]
+    for (size_t i = 0; i < 6; ++i) B.data[i] = (RealType)(7 + i);
+
+    // Compute C = A*B
+    gemm(&C, &A, &B, (RealType)0.0);
+
+    // Print C
+    for (size_t i = 0; i < 2; ++i) {
+        for (size_t j = 0; j < 2; ++j) {
+            printf("%f ", C.data[i * 2 + j]);
+        }
+        printf("\n");
+    }
+
+    mfree(&A);
+    mfree(&B);
+    mfree(&C);
+    return 0;
+}
 ```
 
-## Test
+---
 
-A Makefile is provided to test the library.
+## Testing
 
+A `Makefile` is provided:
+
+```makefile
+# Build tests
+gcc -o test tests.c -lm
+
+# Run
+test: test
+	./test
+
+clean:
+	rm -f test
 ```
-# Build the test program
+
+Execute:
+
+```sh
 make
+make test
+```
 
-# Run the tests
-make run
-```
-To clean up
-
-```
-# Clean up
-make clean
-```
+---
 
 ## Notes
 
-**microBLAS** is designed to be lightweight and portable, not a replacement for highly optimized libraries like OpenBLAS, BLIS, or Intel MKL.
-For small to medium workloads (e.g. embedded systems, simple numerical projects), it provides excellent simplicity with reasonable speed.
-For large-scale linear algebra, prefer a full BLAS/LAPACK library.
+**microBLAS** is designed for **lightweight** and **portable** use cases. It is **not** a substitute for high-performance BLAS implementations (e.g., OpenBLAS, Intel MKL) on large-scale problems. Instead, it offers simplicity and ease of integration for embedded systems and small-scale numerical tasks.
