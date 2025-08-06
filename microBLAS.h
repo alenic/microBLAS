@@ -627,6 +627,7 @@ static inline MBError gemv(Vector *y, const Matrix *A, const Vector *x, RealType
 }
 
 // C = A*B + alpha*C
+// C = A*B + alpha*C
 static inline MBError gemm(Matrix *C, const Matrix *A, const Matrix *B, RealType alpha) {
     MBError err;
     if ((err = mvalid(A)) != MB_SUCCESS) return err;
@@ -635,35 +636,66 @@ static inline MBError gemm(Matrix *C, const Matrix *A, const Matrix *B, RealType
     if (A->cols != B->rows || A->rows != C->rows || B->cols != C->cols)
         return MB_ERR_DIM_MISMATCH;
 
-    for (size_t ii = 0; ii < A->rows; ii += BLOCK_SIZE) {
-        for (size_t jj = 0; jj < B->cols; jj += BLOCK_SIZE) {
-            for (size_t kk = 0; kk < A->cols; kk += BLOCK_SIZE) {
-                
-                size_t i_max = ii + BLOCK_SIZE < A->rows ? ii+BLOCK_SIZE : A->rows;
-                size_t j_max = jj + BLOCK_SIZE < B->cols ? jj+BLOCK_SIZE : B->cols;
-                size_t k_max = kk + BLOCK_SIZE < A->cols ? kk+BLOCK_SIZE : A->cols;
-                
-                for (size_t i = ii; i < i_max; i++) {
-                    for (size_t j = jj; j < j_max; j++) {
-                        RealType sum;
-                        if (kk == 0) {
-                            // First block: scale C
-                            if (alpha == 0.0) sum = 0.0;
-                            else if (alpha == 1.0) sum = C->data[i*C->cols + j];
-                            else sum = alpha * C->data[i*C->cols + j];
-                        } else {
-                            sum = C->data[i*C->cols + j];
-                        }
-                        for (size_t k = kk; k < k_max; k++)
-                            sum += A->data[i*A->cols + k] * B->data[k*B->cols + j];
-                        C->data[i*C->cols + j] = sum;
-                    }
-                }
+    const size_t M    = A->rows;
+    const size_t K    = A->cols;
+    const size_t N    = B->cols;
+    const size_t Acols = A->cols;
+    const size_t Bcols = B->cols;
+    const size_t Ccols = C->cols;
+
+    // restrict: ensure no two pointers in a routine ever point into overlapping memory regions
+    // this will optimize the compiling task
+    RealType * restrict Ad = A->data;
+    RealType * restrict Bd = B->data;
+    RealType * restrict Cd = C->data;
+
+    for (size_t ii = 0; ii < M; ii += BLOCK_SIZE) {
+      for (size_t jj = 0; jj < N; jj += BLOCK_SIZE) {
+        for (size_t kk = 0; kk < K; kk += BLOCK_SIZE) {
+
+          size_t i_max = (ii + BLOCK_SIZE < M) ? ii + BLOCK_SIZE : M;
+          size_t j_max = (jj + BLOCK_SIZE < N) ? jj + BLOCK_SIZE : N;
+          size_t k_max = (kk + BLOCK_SIZE < K) ? kk + BLOCK_SIZE : K;
+
+          for (size_t i = ii; i < i_max; ++i) {
+            // base pointers for this row of A and C
+            RealType *Arow = Ad + i * Acols + kk;
+            RealType *Crow = Cd + i * Ccols + jj;
+
+            for (size_t j = 0; j < (j_max - jj); ++j) {
+              RealType sum;
+              RealType *Ccell = Crow + j;
+
+              // scale once on first k-block
+              if (kk == 0) {
+                if      (alpha == (RealType)0.0) sum = (RealType)0.0;
+                else if (alpha == (RealType)1.0) sum = *Ccell;
+                else                              sum = alpha * (*Ccell);
+              } else {
+                sum = *Ccell;
+              }
+
+              // pointer to the start of this column in B for k = kk
+              RealType *Bk = Bd + kk * Bcols + (jj + j);
+
+              // inner dot-product over k
+              RealType *Ai = Arow;
+              for (size_t k = kk; k < k_max; ++k) {
+                sum += (*Ai) * (*Bk);
+                Ai++;
+                Bk += Bcols;
+              }
+
+              *Ccell = sum;
             }
+          }
         }
+      }
     }
+
     return MB_SUCCESS;
 }
+
 
 #ifdef __cplusplus
     }
