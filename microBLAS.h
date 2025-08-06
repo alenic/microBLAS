@@ -614,14 +614,32 @@ static inline MBError gemv(Vector *y, const Matrix *A, const Vector *x, RealType
     if ((err = vvalid(x)) != MB_SUCCESS) return err;
     if ((err = vvalid(y)) != MB_SUCCESS) return err;
     if (A->cols != x->n || A->rows != y->n) return MB_ERR_DIM_MISMATCH;
-    size_t idx = 0;
-    for (size_t i = 0; i < A->rows; i++, idx += A->cols) {
+
+    const size_t M = A->rows;
+    const size_t N = A->cols;
+    RealType *yd = y->data;
+    const RealType *Ad = A->data;
+    const RealType *xd = x->data;
+
+    for (size_t i = 0; i < M; ++i) {
+        // pointers to row i of A, element i of y
+        const RealType *Ap = Ad + i * N;
+        RealType       *yp = yd + i;
+
+        // scale existing y[i] by alpha (once)
         RealType sum = (alpha == 0.0 ? 0.0
-                         : (alpha == 1.0 ? y->data[i]
-                                        : alpha*y->data[i]));
-        for (size_t j = 0; j < A->cols; j++)
-            sum += A->data[idx+j] * x->data[j];
-        y->data[i] = sum;
+                        : alpha == 1.0 ? *yp
+                        : alpha * *yp);
+
+        // dot product of row i and x
+        const RealType *xp = xd;
+        for (size_t j = 0; j < N; ++j) {
+            sum += *Ap * *xp;
+            Ap++;    // next A[i,j+1]
+            xp++;    // next x[j+1]
+        }
+
+        *yp = sum;
     }
     return MB_SUCCESS;
 }
